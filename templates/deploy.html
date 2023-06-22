@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deployment</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mx-auto p-8">
+        <h1 class="text-3xl font-bold mb-6">Deployment</h1>
+        <div class="border border-gray-200 rounded p-4">
+            <h2 class="text-xl mb-4">Confirm Deployment</h2>
+            <p class="mb-4">You are about to deploy the project to production. This action cannot be undone.</p>
+            <form action="/deploy/{{ project_id }}" method="POST">
+                <input type="hidden" name="confirm" value="yes">
+                <button class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded" type="submit">Deploy</button>
+                <a class="text-blue-500 hover:underline ml-4" href="/">Cancel</a>
+            </form>
+        </div>
+    </div>
+</body>
+</html>

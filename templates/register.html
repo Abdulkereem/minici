@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mx-auto p-8">
+        <h1 class="text-3xl font-bold mb-6">Register Project</h1>
+        <form method="POST" action="/register">
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2" for="name">Project Name</label>
+                <input class="border border-gray-300 rounded px-3 py-2 w-full" type="text" name="name" id="name" required value="{{project.name}}">
+            </div>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2" for="directory">Project Directory</label>
+                <input class="border border-gray-300 rounded px-3 py-2 w-full" type="text" name="directory" id="directory" required value="{{project.directory}}">
+            </div>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2" for="deploy_commands">Deployment Commands</label>
+                <input class="border border-gray-300 rounded px-3 py-2 w-full" type="text" name="deploy_commands" id="deploy_commands" value="{{project.deploy_commands}}" required>
+                <p class="text-xs text-gray-500">Separate multiple commands with commas</p>
+            </div>
+            <div>
+                <button class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded" type="submit">Register Project</button>
+            </div>
+        </form>
+    </div>
+</body>
+</html>

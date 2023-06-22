@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="flex">
+        <div class="bg-gray-200 w-64 min-h-screen">
+            <div class="flex items-center justify-center h-16 bg-gray-900 text-white">
+                <img class="h-8" src="path/to/minici-logo.png" alt="Minici Logo">
+                <h1 class="ml-2 text-xl font-semibold">Minici</h1>
+            </div>
+            <ul class="mt-8 space-y-2">
+                <li class="px-4 py-2 text-gray-600 hover:bg-gray-100 cursor-pointer">Dashboard</li>
+                <li class="px-4 py-2 text-gray-600 hover:bg-gray-100 cursor-pointer"><a href="/register">Register Project</a></li>
+            </ul>
+        </div>
+        <div class="container mx-auto p-8">
+            <h1 class="text-3xl font-bold mb-6">Dashboard</h1>
+            <div class="space-y-4">
+                {% for project in projects %}
+                <div class="border border-gray-200 rounded p-4">
+                    <div class="flex justify-between">
+                        <h2 class="text-xl">{{ project.name }}</h2>
+                        {% if project.updated %}
+                        <span class="bg-green-500 text-white px-2 py-1 rounded">Updated</span>
+                        {% endif %}
+                    </div>
+                    <div class="mt-2">
+                        {% if project.updated %}
+                        <button class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded" data-project-id="{{ project.id }}">Accept</button>
+                        {% else %}
+                        <button class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded" data-project-id="{{ project.id }}">Check for Updates</button>
+                        {% endif %}
+                        <button class="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded" data-rebuild-id="{{ project.id }}">Rebuild</button>
+                        <button class="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded" data-command-id="{{ project.id }}">Run Custom Command</button>
+                        <a href="/register?id={{ project.id }}" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded">Edit</a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            $('[data-project-id]').click(function() {
+                var projectId = $(this).data('project-id');
+                var confirmRelease = confirm("Do you want to continue and release this to production?");
+                if (confirmRelease) {
+                    $.ajax({
+                        url: '/deploy/' + projectId,
+                        method: 'POST',
+                        data: {
+                            confirm: 'yes'
+                        },
+                        success: function(data) {
+                            if (data && data.success) {
+                                alert("Deployment Successful!");
+                            } else {
+                                console.error("Deployment failed");
+                            }
+                        },
+                        error: function(error) {
+                            console.error(error);
+                        }
+                    });
+                }
+            });
+
+            $('[data-rebuild-id]').click(function() {
+                var projectId = $(this).data('rebuild-id');
+                var confirmRebuild = confirm("Do you want to rebuild this project?");
+                if (confirmRebuild) {
+                    $.ajax({
+                        url: '/rebuild/' + projectId,
+                        method: 'POST',
+                        success: function(data) {
+                            alert("Rebuild Successful!");
+                        },
+                        error: function(error) {
+                            console.error(error);
+                        }
+                    });
+                }
+            });
+
+            $('[data-command-id]').click(function() {
+                var projectId = $(this).data('command-id');
+                var customCommand = prompt("Enter the custom command to run:");
+                if (customCommand) {
+                    $.ajax({
+                        url: '/run-command/' + projectId,
+                        method: 'POST',
+                        data: {
+                            command: customCommand
+                        },
+                        success: function(data) {
+                            alert("Custom Command Executed!");
+                        },
+                        error: function(error) {
+                            console.error(error);
+                        }
+                    });
+                }
+            });
+        });
+    </script>
+</body>
+</html>
