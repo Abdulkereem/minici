@@ -1,7 +1,7 @@
 {       
    apps:            
       [{
-        name: "djnago_with_pm2",          
+        name: "minici",          
         script: "minici.py",
         exec_mode: "fork", 
         instances: "1", 
