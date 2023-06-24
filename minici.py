@@ -1,10 +1,11 @@
-from flask import Flask, render_template, request, redirect
+from flask import Flask, render_template, request, redirect , current_app
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_required, login_user, logout_user
 import string
 import secrets
 import os
 import subprocess
+import threading
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///projects.db'
@@ -14,6 +15,10 @@ db = SQLAlchemy(app)
 # Initialize Flask-Login
 login_manager = LoginManager()
 login_manager.init_app(app)
+
+# Watch Thread
+watch_thread = None
+watch_thread_stop_event = threading.Event()
 
 
 class User(UserMixin, db.Model):
@@ -34,29 +39,60 @@ class Project(db.Model):
     updated = db.Column(db.Boolean, default=False)
 
 
+class WatchList(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    project_id = db.Column(db.Integer, db.ForeignKey('project.id'))
+    project = db.relationship('Project', backref='watchlist')
+
+    def __init__(self, project):
+        self.project = project
+
+
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
-
 
 
 def generate_random_password(length=12):
     alphabet = string.ascii_letters + string.digits + string.punctuation
     password = ''.join(secrets.choice(alphabet) for _ in range(length))
     return password
+
+
+def deployment_thread():
+    while not watch_thread_stop_event.is_set():
+        # Retrieve projects on the watch list
+        with current_app.app_context():
+            watch_list = WatchList.query.all()
+
+            for watch_item in watch_list:
+                project = watch_item.project
+
+                os.chdir(project.directory)
+                subprocess.run(['git', 'pull'])
+                subprocess.run(project.deploy_commands.split(','), shell=True)
+
+                project.updated = False
+                db.session.commit()
+
+        watch_thread_stop_event.wait(60)  # Check every 60 seconds
+
+
 @app.route('/migrate')
 def migrate():
     # Create the database tables
     db.drop_all()
     db.create_all()
-    
+
+
 @app.route('/seed/<email>')
-def seed(email:str):
+def seed(email: str):
     import os
-    new_user = User(username=email,password=generate_random_password())
+    new_user = User(username=email, password=generate_random_password())
     db.session.add(new_user)
     db.session.commit()
     return new_user.password
+
 
 @app.route('/')
 @login_required
@@ -164,5 +200,24 @@ def logout():
     return redirect('/')
 
 
+@app.route('/watch-push', methods=['POST'])
+def watch_push():
+    payload = request.json
+    if payload:
+        project_id = payload.get('project_id')
+        project = Project.query.get(project_id)
+        if project:
+            watch_item = WatchList(project=project)
+            db.session.add(watch_item)
+            db.session.commit()
+
+    return 'OK'
+
+
 if __name__ == '__main__':
+    # Start the deployment thread
+    watch_thread = threading.Thread(target=deployment_thread)
+    watch_thread.start()
+
     app.run(debug=True)
+

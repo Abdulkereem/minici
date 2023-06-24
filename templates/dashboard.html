@@ -31,9 +31,9 @@
                     </div>
                     <div class="mt-2">
                         {% if project.updated %}
-                        <button class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded" data-project-id="{{ project.id }}">Accept</button>
+                        <button class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded" disabled>Added to Watch</button>
                         {% else %}
-                        <button class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded" data-project-id="{{ project.id }}">Check for Updates</button>
+                        <button class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded" data-project-id="{{ project.id }}">Watch for Updates</button>
                         {% endif %}
                         <button class="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded" data-rebuild-id="{{ project.id }}">Rebuild</button>
                         <button class="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded" data-command-id="{{ project.id }}">Run Custom Command</button>
