@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CLI</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css">
+  <style>
+    body {
+      background-color: #1f2937;
+    }
+
+    .terminal-container {
+      background-color: #2d3748;
+      padding: 1rem;
+      border-radius: 0.5rem;
+    }
+
+    .terminal pre {
+      color: #dcdcdc;
+      font-family: monospace;
+      font-size: 14px;
+      line-height: 1.5;
+      overflow-wrap: break-word;
+      white-space: pre-wrap;
+    }
+
+    .terminal pre::selection {
+      background-color: #3399ff;
+    }
+
+    .terminal input[type="text"] {
+      background-color: #2d3748;
+      color: #dcdcdc;
+      font-family: monospace;
+      font-size: 14px;
+      line-height: 1.5;
+      border: 0;
+      padding: 8px;
+      width: 100%;
+      box-sizing: border-box;
+      outline: none;
+    }
+
+    .terminal input[type="text"]::placeholder {
+      color: #787878;
+    }
+
+    .terminal button {
+      color: #dcdcdc;
+      font-family: monospace;
+      font-size: 14px;
+      line-height: 1.5;
+      border: 0;
+      padding: 8px 16px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+
+    .terminal button:hover {
+      background-color: #3399ff;
+    }
+  </style>
+</head>
+<body>
+  <div class="container mx-auto px-4 py-8">
+    <h1 class="text-3xl font-bold mb-6 text-white">CLI</h1>
+    <div class="terminal-container">
+      <pre id="terminal-output" class="p-4 overflow-y-scroll"></pre>
+    </div>
+    <div class="flex mt-4">
+      <input id="command-input" class="flex-grow px-4 py-2 rounded-l" type="text" placeholder="Enter a command">
+      <button id="run-button" class="px-4 py-2 bg-blue-500 text-white rounded-l-none">Run</button>
+      <button id="clear-button" class="px-4 py-2 bg-red-500 text-white rounded-r">Clear</button>
+    </div>
+  </div>
+
+  <script src="https://cdn.socket.io/4.3.1/socket.io.min.js"></script>
+  <script>
+    // Connect to the Socket.IO server
+    const socket = io.connect();
+
+    // Event handler for receiving output from the server
+    socket.on('output', (data) => {
+      const outputElement = document.getElementById('terminal-output');
+      outputElement.textContent += data + '\n';
+      outputElement.scrollTop = outputElement.scrollHeight;
+    });
+
+    // Event handler for the command execution
+    function runCommand() {
+      const command = document.getElementById('command-input').value;
+      if (command.trim() !== '') {
+        socket.emit('run_command', command);
+        document.getElementById('command-input').value = '';
+      }
+    }
+
+    // Event handler for the command completion
+    socket.on('command_finished', () => {
+      const outputElement = document.getElementById('terminal-output');
+      outputElement.textContent += 'Command finished.\n';
+      outputElement.scrollTop = outputElement.scrollHeight;
+    });
+
+    // Event handler for the clear button
+    document.getElementById('clear-button').addEventListener('click', () => {
+      document.getElementById('terminal-output').textContent = '';
+    });
+
+    // Event handler for the run button
+    document.getElementById('run-button').addEventListener('click', () => {
+      runCommand();
+    });
+
+    // Event handler for the Enter key in the command input
+    document.getElementById('command-input').addEventListener('keydown', (event) => {
+      if (event.keyCode === 13) {
+        runCommand();
+      }
+    });
+  </script>
+</body>
+</html>

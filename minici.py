@@ -6,11 +6,16 @@ import secrets
 import os
 import subprocess
 import threading
+from flask_socketio import SocketIO, emit
+import subprocess
+import eventlet
+
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///projects.db'
 app.config['SECRET_KEY'] = 'your-secret-key'  # Change this to a secure secret key
 db = SQLAlchemy(app)
+socketio = SocketIO(app)
 
 # Initialize Flask-Login
 login_manager = LoginManager()
@@ -60,9 +65,9 @@ def generate_random_password(length=12):
 
 
 def deployment_thread():
-    while not watch_thread_stop_event.is_set():
-        # Retrieve projects on the watch list
-        with current_app.app_context():
+    with app.app_context():
+        while not watch_thread_stop_event.is_set():
+            # Retrieve projects on the watch list
             watch_list = WatchList.query.all()
 
             for watch_item in watch_list:
@@ -178,6 +183,11 @@ def run_command(project_id):
     return redirect('/')
 
 
+
+
+
+
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -214,10 +224,73 @@ def watch_push():
     return 'OK'
 
 
+
+
+
+# # Route for the CLI interaction page
+# @app.route('/cli')
+# @login_required
+# def cli():
+#     return render_template('cli.html')
+
+# # Event handler for CLI command execution
+# @socketio.on('run_command')
+# def run_command(command):
+#     # Execute the command and emit the output line by line
+#     process = subprocess.Popen(
+#         command,
+#         shell=True,
+#         stdout=subprocess.PIPE,
+#         stderr=subprocess.STDOUT,
+#         universal_newlines=True
+#     )
+
+#     for line in process.stdout:
+#         emit('output', line.strip())
+
+#     # Emit a signal to indicate that the command has finished
+#     emit('command_finished')
+
+
+
+
+@app.route('/cli/<project_id>')
+def cli(project_id):
+    # Get the project directory based on the project_id
+    project = Project.query.get(project_id)
+    # project_directory = get_project_directory(project_id)
+
+    # Change to the project directory
+    os.chdir(project.directory)
+
+    return render_template('cli.html')
+
+# Event handler for CLI command execution
+@socketio.on('run_command')
+def run_command(command):
+    # Execute the command and emit the output line by line
+    process = subprocess.Popen(
+        command,
+        shell=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        universal_newlines=True
+    )
+
+    for line in process.stdout:
+        emit('output', line.strip())
+
+    # Emit a signal to indicate that the command has finished
+    emit('command_finished')
+
+
 if __name__ == '__main__':
     # Start the deployment thread
     watch_thread = threading.Thread(target=deployment_thread)
     watch_thread.start()
 
-    app.run(debug=True)
+    eventlet.wsgi.server(eventlet.listen(('', 3300)), app)
+
+
+
 

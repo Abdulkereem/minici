@@ -8,21 +8,21 @@
 </head>
 <body>
     <div class="flex">
-        <div class="bg-gray-200 w-64 min-h-screen">
+        <div class="bg-gray-900 w-64 min-h-screen">
             <div class="flex items-center justify-center h-16 bg-gray-900 text-white">
                 <img class="h-8" src="path/to/minici-logo.png" alt="Minici Logo">
                 <h1 class="ml-2 text-xl font-semibold">Minici</h1>
             </div>
             <ul class="mt-8 space-y-2">
-                <li class="px-4 py-2 text-gray-600 hover:bg-gray-100 cursor-pointer">Dashboard</li>
-                <li class="px-4 py-2 text-gray-600 hover:bg-gray-100 cursor-pointer"><a href="/register">Register Project</a></li>
+                <li class="px-4 py-2 text-gray-600 hover:bg-gray-800 cursor-pointer">Dashboard</li>
+                <li class="px-4 py-2 text-gray-600 hover:bg-gray-800 cursor-pointer"><a href="/register">Register Project</a></li>
             </ul>
         </div>
         <div class="container mx-auto p-8">
             <h1 class="text-3xl font-bold mb-6">Dashboard</h1>
             <div class="space-y-4">
                 {% for project in projects %}
-                <div class="border border-gray-200 rounded p-4">
+                <div class="border border-gray-800 rounded p-4">
                     <div class="flex justify-between">
                         <h2 class="text-xl">{{ project.name }}</h2>
                         {% if project.updated %}
@@ -38,6 +38,7 @@
                         <button class="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded" data-rebuild-id="{{ project.id }}">Rebuild</button>
                         <button class="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded" data-command-id="{{ project.id }}">Run Custom Command</button>
                         <a href="/register?id={{ project.id }}" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded">Edit</a>
+                        <button class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded" data-cli-id="{{ project.id }}">CLI</button>
                     </div>
                 </div>
                 {% endfor %}
@@ -107,6 +108,11 @@
                         }
                     });
                 }
+            });
+
+            $('[data-cli-id]').click(function() {
+                var projectId = $(this).data('cli-id');
+                window.location.href = '/cli/' + projectId;
             });
         });
     </script>
