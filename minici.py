@@ -1,30 +1,38 @@
-from flask import Flask, render_template, request, redirect
-from flask_sqlalchemy import SQLAlchemy
+from flask import Flask, render_template, request, redirect , current_app
+
 from flask_login import LoginManager, UserMixin, login_required, login_user, logout_user
-from flask_alembic import Alembic
 import string
 import secrets
 import os
 import subprocess
 import threading
-from alembic.config import Config
-from alembic import command
-import click
+from flask_socketio import SocketIO, emit
+import subprocess
+import eventlet
 from flask.cli import FlaskGroup
-import os
+
 
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///projects.db'
 app.config['SECRET_KEY'] = 'your-secret-key'  # Change this to a secure secret key
-# os.environ['FLASK_APP'] = 'minici.py'
-
 db = SQLAlchemy(app)
-cli = FlaskGroup(help="Perform user seed authentication")
+socketio = SocketIO(app)
+cli = FlaskGroup(help="handle cli commands")
 
-@cli.command()
-def create_super_user():
+@cli.command('createsuperuser')
+def createsuperuser():
     print("hello world")
+
+@cli.command('runminici')
+def run_minici():
+    # Start the deployment thread
+    watch_thread = threading.Thread(target=deployment_thread)
+    watch_thread.start()
+
+    eventlet.wsgi.server(eventlet.listen(('', 3300)), app)
+
+
 
 # Initialize Flask-Login
 login_manager = LoginManager()
@@ -35,32 +43,9 @@ watch_thread = None
 watch_thread_stop_event = threading.Event()
 
 
-class User(UserMixin, db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(100), unique=True)
-    password = db.Column(db.String(100))
-
-    def __init__(self, username, password):
-        self.username = username
-        self.password = password
 
 
-class Project(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100))
-    directory = db.Column(db.String(100))
-    deploy_commands = db.Column(db.String(255))
-    updated = db.Column(db.Boolean, default=False)
-    git_email = db.Column(db.String(255))
-    git_token = db.Column(db.String(255))
 
-class WatchList(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    project_id = db.Column(db.Integer, db.ForeignKey('project.id'))
-    project = db.relationship('Project', backref='watchlist')
-
-    def __init__(self, project):
-        self.project = project
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
@@ -82,10 +67,6 @@ def deployment_thread():
                 project = watch_item.project
 
                 os.chdir(project.directory)
-
-                # Set Git credentials for this project
-                set_git_credentials(project.git_email, project.git_token)
-
                 subprocess.run(['git', 'pull'])
                 subprocess.run(project.deploy_commands.split(','), shell=True)
 
@@ -95,32 +76,7 @@ def deployment_thread():
         watch_thread_stop_event.wait(60)  # Check every 60 seconds
 
 
-def set_git_credentials(email, token):
-    subprocess.run(['git', 'config', '--global', 'user.email', email])
-    subprocess.run(['git', 'config', '--global', 'user.token', token])
 
-
-# @app.route('/migrate')
-# def migrate():
-#     # Create the database tables
-#     db.drop_all()
-#     db.create_all()
-
-
-@app.route('/seed/<email>')
-def seed(email: str):
-    import os
-    new_user = User(username=email, password=generate_random_password())
-    db.session.add(new_user)
-    db.session.commit()
-    return new_user.password
-
-
-@app.route('/')
-@login_required
-def dashboard():
-    projects = Project.query.all()
-    return render_template('dashboard.html', projects=projects)
 
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -131,8 +87,6 @@ def register():
         name = request.form['name']
         directory = request.form['directory']
         deploy_commands = request.form['deploy_commands']
-        git_email = request.form['git_email']
-        git_token = request.form['git_token']
 
         if project_id:
             # Update existing project
@@ -141,12 +95,9 @@ def register():
                 project.name = name
                 project.directory = directory
                 project.deploy_commands = deploy_commands
-                project.git_email = git_email
-                project.git_token = git_token
         else:
             # Create a new project
-            project = Project(name=name, directory=directory, deploy_commands=deploy_commands,
-                              git_email=git_email, git_token=git_token)
+            project = Project(name=name, directory=directory, deploy_commands=deploy_commands)
             db.session.add(project)
 
         db.session.commit()
@@ -170,10 +121,6 @@ def deploy(project_id):
         if request.method == 'POST':
             if request.form.get('confirm') == 'yes':
                 os.chdir(project.directory)
-
-                # Set Git credentials for this project
-                set_git_credentials(project.git_email, project.git_token)
-
                 subprocess.run(['git', 'pull'])
                 subprocess.run(project.deploy_commands.split(','), shell=True)
 
@@ -207,6 +154,11 @@ def run_command(project_id):
         subprocess.run(command.split(','), shell=True)
 
     return redirect('/')
+
+
+
+
+
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -245,11 +197,68 @@ def watch_push():
     return 'OK'
 
 
-if __name__ == '__main__':
-    # Start the deployment thread
-    watch_thread = threading.Thread(target=deployment_thread)
-    watch_thread.start()
-    cli()
 
-    # app.run()
+
+
+# # Route for the CLI interaction page
+# @app.route('/cli')
+# @login_required
+# def cli():
+#     return render_template('cli.html')
+
+# # Event handler for CLI command execution
+# @socketio.on('run_command')
+# def run_command(command):
+#     # Execute the command and emit the output line by line
+#     process = subprocess.Popen(
+#         command,
+#         shell=True,
+#         stdout=subprocess.PIPE,
+#         stderr=subprocess.STDOUT,
+#         universal_newlines=True
+#     )
+
+#     for line in process.stdout:
+#         emit('output', line.strip())
+
+#     # Emit a signal to indicate that the command has finished
+#     emit('command_finished')
+
+
+
+
+@app.route('/cli/<project_id>')
+def terminal(project_id):
+    # Get the project directory based on the project_id
+    project = Project.query.get(project_id)
+    # project_directory = get_project_directory(project_id)
+
+    # Change to the project directory
+    os.chdir(project.directory)
+
+    return render_template('cli.html')
+
+# Event handler for CLI command execution
+@socketio.on('run_command')
+def run_command(command):
+    # Execute the command and emit the output line by line
+    process = subprocess.Popen(
+        command,
+        shell=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        universal_newlines=True
+    )
+
+    for line in process.stdout:
+        emit('output', line.strip())
+
+    # Emit a signal to indicate that the command has finished
+    emit('command_finished')
+
+
+if __name__ == '__main__':
+    cli()
+    
+
 
