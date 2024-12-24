@@ -1,114 +1,173 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard</title>
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-</head>
-<body>
-    <div class="flex">
-        <div class="bg-gray-200 w-64 min-h-screen">
-            <div class="flex items-center justify-center h-16 bg-gray-900 text-white">
-                <img class="h-8" src="path/to/minici-logo.png" alt="Minici Logo">
-                <h1 class="ml-2 text-xl font-semibold">Minici</h1>
-            </div>
-            <ul class="mt-8 space-y-2">
-                <li class="px-4 py-2 text-gray-600 hover:bg-gray-100 cursor-pointer">Dashboard</li>
-                <li class="px-4 py-2 text-gray-600 hover:bg-gray-100 cursor-pointer"><a href="/register">Register Project</a></li>
-            </ul>
-        </div>
-        <div class="container mx-auto p-8">
-            <h1 class="text-3xl font-bold mb-6">Dashboard</h1>
-            <div class="space-y-4">
-                {% for project in projects %}
-                <div class="border border-gray-200 rounded p-4">
-                    <div class="flex justify-between">
-                        <h2 class="text-xl">{{ project.name }}</h2>
-                        {% if project.updated %}
-                        <span class="bg-green-500 text-white px-2 py-1 rounded">Updated</span>
-                        {% endif %}
-                    </div>
-                    <div class="mt-2">
-                        {% if project.updated %}
-                        <button class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded" data-project-id="{{ project.id }}">Accept</button>
-                        {% else %}
-                        <button class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded" data-project-id="{{ project.id }}">Check for Updates</button>
-                        {% endif %}
-                        <button class="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded" data-rebuild-id="{{ project.id }}">Rebuild</button>
-                        <button class="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded" data-command-id="{{ project.id }}">Run Custom Command</button>
-                        <a href="/register?id={{ project.id }}" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded">Edit</a>
-                    </div>
+{% extends 'base.html' %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<style>
+    :root {
+        --card-bg: #2d2d2d;
+        --hover-bg: #363636;
+        --accent-green: #4CAF50;
+        --accent-yellow: #FFC107;
+        --accent-blue: #2196F3;
+        --accent-purple: #9C27B0;
+        --accent-red: #f44336;
+        --text-primary: #e0e0e0;
+        --text-secondary: #a0a0a0;
+    }
+
+    .dashboard-container {
+        padding: 24px;
+        max-width: 1400px;
+        margin: 0 auto;
+    }
+
+    .project-card {
+        background: var(--card-bg);
+        border: 1px solid #333;
+        border-radius: 8px;
+        transition: all 0.2s ease;
+    }
+
+    .project-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    .status-badge {
+        background: var(--accent-green);
+        font-size: 0.875rem;
+        padding: 4px 12px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .status-badge::before {
+        content: '';
+        display: inline-block;
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: currentColor;
+        animation: pulse 2s infinite;
+    }
+
+    .action-button {
+        padding: 8px 16px;
+        border-radius: 6px;
+        font-weight: 500;
+        transition: all 0.2s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        border: 1px solid transparent;
+    }
+
+    .action-button:hover {
+        transform: translateY(-1px);
+    }
+
+    .action-button i {
+        font-size: 14px;
+    }
+
+    .btn-accept { background: var(--accent-green); color: #000; }
+    .btn-accept:hover { background: #43A047; }
+
+    .btn-rebuild { background: var(--accent-yellow); color: #000; }
+    .btn-rebuild:hover { background: #FFB300; }
+
+    .btn-deploy { background: var(--accent-blue); color: white; }
+    .btn-deploy:hover { background: #1E88E5; }
+
+    .btn-command { background: var(--accent-purple); color: white; }
+    .btn-command:hover { background: #8E24AA; }
+
+    .btn-edit { 
+        background: transparent; 
+        border-color: #555;
+        color: var(--text-secondary);
+    }
+    .btn-edit:hover { 
+        border-color: var(--text-primary);
+        color: var(--text-primary);
+    }
+
+    .btn-delete { background: var(--accent-red); color: white; }
+    .btn-delete:hover { background: #E53935; }
+
+    @keyframes pulse {
+        0% { opacity: 1; }
+        50% { opacity: 0.5; }
+        100% { opacity: 1; }
+    }
+</style>
+
+<div class="dashboard-container">
+    <h1 class="text-3xl font-bold mb-8 text-white">Dashboard</h1>
+    
+    <div class="grid gap-6">
+        {% for project in projects %}
+        <div class="project-card p-6">
+            <div class="flex justify-between items-center mb-6">
+                <div class="flex items-center gap-4">
+                    <h2 class="text-xl font-semibold text-white">{{ project.name }}</h2>
+                    {% if project.updated %}
+                    <span class="status-badge">Updated</span>
+                    {% endif %}
                 </div>
-                {% endfor %}
+                <div class="text-sm text-gray-400">
+                    Project ID: {{ project.id }}
+                </div>
+            </div>
+            
+            <div class="flex flex-wrap gap-3">
+                <button class="action-button btn-accept" data-project-id="{{ project.id }}">
+                    <i class="fas fa-check"></i>
+                    Accept
+                </button>
+                
+                <a href="/rebuild/{{ project.id }}" class="action-button btn-rebuild">
+                    <i class="fas fa-sync"></i>
+                    Rebuild
+                </a>
+                
+                <button class="action-button btn-deploy" data-deploy-id="{{ project.id }}">
+                    <i class="fas fa-rocket"></i>
+                    Deploy
+                </button>
+                
+                <a href="/run-command/{{ project.id }}" class="action-button btn-command">
+                    <i class="fas fa-terminal"></i>
+                    Run Command
+                </a>
+                
+                <a href="/edit/{{ project.id }}" class="action-button btn-edit">
+                    <i class="fas fa-pencil-alt"></i>
+                    Edit
+                </a>
+                
+                <button class="action-button btn-delete" data-delete-id="{{ project.id }}">
+                    <i class="fas fa-trash-alt"></i>
+                    Delete
+                </button>
             </div>
         </div>
+        {% endfor %}
     </div>
+</div>
 
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script>
-        $(document).ready(function() {
-            $('[data-project-id]').click(function() {
-                var projectId = $(this).data('project-id');
-                var confirmRelease = confirm("Do you want to continue and release this to production?");
-                if (confirmRelease) {
-                    $.ajax({
-                        url: '/deploy/' + projectId,
-                        method: 'POST',
-                        data: {
-                            confirm: 'yes'
-                        },
-                        success: function(data) {
-                            if (data && data.success) {
-                                alert("Deployment Successful!");
-                            } else {
-                                console.error("Deployment failed");
-                            }
-                        },
-                        error: function(error) {
-                            console.error(error);
-                        }
-                    });
-                }
-            });
-
-            $('[data-rebuild-id]').click(function() {
-                var projectId = $(this).data('rebuild-id');
-                var confirmRebuild = confirm("Do you want to rebuild this project?");
-                if (confirmRebuild) {
-                    $.ajax({
-                        url: '/rebuild/' + projectId,
-                        method: 'POST',
-                        success: function(data) {
-                            alert("Rebuild Successful!");
-                        },
-                        error: function(error) {
-                            console.error(error);
-                        }
-                    });
-                }
-            });
-
-            $('[data-command-id]').click(function() {
-                var projectId = $(this).data('command-id');
-                var customCommand = prompt("Enter the custom command to run:");
-                if (customCommand) {
-                    $.ajax({
-                        url: '/run-command/' + projectId,
-                        method: 'POST',
-                        data: {
-                            command: customCommand
-                        },
-                        success: function(data) {
-                            alert("Custom Command Executed!");
-                        },
-                        error: function(error) {
-                            console.error(error);
-                        }
-                    });
-                }
-            });
+<script>
+    // Add confirmation dialogs for destructive actions
+    document.querySelectorAll('[data-delete-id]').forEach(button => {
+        button.addEventListener('click', (e) => {
+            const projectId = e.target.dataset.deleteId;
+            if (confirm('Are you sure you want to delete this project? This action cannot be undone.')) {
+                window.location = `/delete/${projectId}`
+            }
         });
-    </script>
-</body>
-</html>
+    });
+</script>
+{% endblock %}

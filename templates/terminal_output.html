@@ -1,0 +1,204 @@
+{% extends 'base.html' %}
+
+{% block title %}Terminal Output{% endblock %}
+
+{% block content %}
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        :root {
+            --terminal-bg: #1e1e1e;
+            --terminal-text: #e0e0e0;
+            --terminal-prompt: #4CAF50;
+            --terminal-input-bg: #2d2d2d;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            background: var(--terminal-bg);
+            color: var(--terminal-text);
+        }
+
+        .terminal-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            width: 100%;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .output-section {
+            flex: 1;
+            overflow-y: auto;
+            margin-bottom: 20px;
+            background: var(--terminal-bg);
+            border-radius: 8px;
+            padding: 16px;
+        }
+
+        .output-container {
+            background: var(--terminal-input-bg);
+            border-radius: 6px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .output-title {
+            color: var(--terminal-prompt);
+            font-size: 0.9em;
+            margin-bottom: 8px;
+        }
+
+        pre {
+            margin: 0;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .input-section {
+            position: sticky;
+            bottom: 0;
+            background: var(--terminal-input-bg);
+            padding: 16px;
+            border-radius: 8px;
+            display: flex;
+            gap: 12px;
+        }
+
+        .command-input {
+            flex: 1;
+            background: var(--terminal-bg);
+            border: 1px solid #444;
+            color: var(--terminal-text);
+            padding: 12px;
+            border-radius: 4px;
+            font-family: inherit;
+            font-size: 14px;
+        }
+
+        .command-input:focus {
+            outline: none;
+            border-color: var(--terminal-prompt);
+        }
+
+        .run-button {
+            background: var(--terminal-prompt);
+            color: #000;
+            border: none;
+            padding: 0 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: opacity 0.2s;
+        }
+
+        .run-button:hover {
+            opacity: 0.9;
+        }
+
+        .back-link {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            color: var(--terminal-prompt);
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            border: 1px solid var(--terminal-prompt);
+        }
+
+        .back-link:hover {
+            background: rgba(76, 175, 80, 0.1);
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--terminal-bg);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #444;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="terminal-container">
+        <a href="/" class="back-link">Go Back</a>
+        
+        <div class="output-section">
+            <div class="output-container">
+                <div class="output-title">Standard Output</div>
+                <pre>{{ output }}</pre>
+            </div>
+            
+            <div class="output-container">
+                <div class="output-title">Error Output</div>
+                <pre>{{ error }}</pre>
+            </div>
+            
+            <div class="output-container">
+                <div class="output-title">Command Response</div>
+                <pre id="command_output"></pre>
+            </div>
+        </div>
+
+        <div class="input-section">
+            <input type="text" id="command_input" class="command-input" placeholder="Enter command..." required>
+            <button onclick="runCommand()" class="run-button">Run</button>
+        </div>
+    </div>
+
+    <script>
+        async function runCommand() {
+            const commandInput = document.getElementById('command_input');
+            const command = commandInput.value;
+
+            if (!command) {
+                alert("Please enter a command.");
+                return;
+            }
+
+            try {
+                const response = await fetch(`/run-command/{{ project.id }}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ command }),
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    document.getElementById('command_output').textContent = `Error: ${errorText}`;
+                    return;
+                }
+
+                const result = await response.json();
+                document.getElementById('command_output').textContent = result.output || result.error || "No output received.";
+                
+                // Clear input after successful command
+                commandInput.value = '';
+            } catch (error) {
+                document.getElementById('command_output').textContent = `Error: ${error.message}`;
+            }
+        }
+
+        // Add event listener for Enter key
+        document.getElementById('command_input').addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                runCommand();
+            }
+        });
+    </script>
+</body>
+</html>
+{% endblock %}

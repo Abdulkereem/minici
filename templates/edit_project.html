@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}Register Project{% endblock %}
+{% block title %}Edit Project{% endblock %}
 
 {% block content %}
 <style>
@@ -13,7 +13,7 @@
         --error-color: #f44336;
     }
 
-    .register-container {
+    .edit-container {
         max-width: 800px;
         margin: 0 auto;
         padding: 32px;
@@ -28,7 +28,6 @@
 
     .form-group {
         margin-bottom: 24px;
-        position: relative;
     }
 
     .form-label {
@@ -36,9 +35,7 @@
         font-size: 0.875rem;
         font-weight: 500;
         margin-bottom: 8px;
-        display: flex;
-        align-items: center;
-        gap: 8px;
+        display: block;
     }
 
     .form-input {
@@ -66,9 +63,6 @@
         margin-top: 6px;
         color: var(--text-secondary);
         font-size: 0.75rem;
-        display: flex;
-        align-items: center;
-        gap: 4px;
     }
 
     .form-button {
@@ -88,25 +82,22 @@
         background: #43A047;
     }
 
+    .form-button i {
+        font-size: 16px;
+    }
+
     .token-input {
         font-family: 'Monaco', 'Menlo', monospace;
         letter-spacing: 0.5px;
     }
 
-    .directory-browse {
-        position: absolute;
-        right: 12px;
-        top: 38px;
-        color: var(--text-secondary);
-        padding: 4px 8px;
-        border-radius: 4px;
-        cursor: pointer;
-        transition: all 0.2s ease;
+    /* Validation styles */
+    .form-input:invalid {
+        border-color: var(--error-color);
     }
 
-    .directory-browse:hover {
-        color: var(--text-primary);
-        background: rgba(255, 255, 255, 0.1);
+    .form-input:invalid:focus {
+        box-shadow: 0 0 0 2px rgba(244, 67, 54, 0.2);
     }
 
     .validation-error {
@@ -119,73 +110,22 @@
     .form-input:invalid + .validation-error {
         display: block;
     }
-
-    .progress-steps {
-        display: flex;
-        justify-content: space-between;
-        margin-bottom: 32px;
-        position: relative;
-    }
-
-    .progress-steps::before {
-        content: '';
-        position: absolute;
-        top: 14px;
-        left: 0;
-        right: 0;
-        height: 2px;
-        background: #333;
-        z-index: 0;
-    }
-
-    .step {
-        background: var(--form-bg);
-        border: 2px solid #333;
-        width: 30px;
-        height: 30px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 14px;
-        font-weight: 500;
-        color: var(--text-secondary);
-        position: relative;
-        z-index: 1;
-    }
-
-    .step.active {
-        border-color: var(--accent-color);
-        color: var(--accent-color);
-    }
-
-    .step.completed {
-        background: var(--accent-color);
-        border-color: var(--accent-color);
-        color: #000;
-    }
 </style>
 
-<div class="register-container">
+<div class="edit-container">
     <div class="flex items-center justify-between mb-8">
-        <h1 class="text-3xl font-bold text-white">Register Project</h1>
-        <a href="/" class="text-gray-400 hover:text-white transition-colors">
+        <h1 class="text-3xl font-bold text-white">Edit Project</h1>
+        <a href="/dashboard" class="text-gray-400 hover:text-white transition-colors">
             <i class="fas fa-arrow-left mr-2"></i>
             Back to Dashboard
         </a>
     </div>
 
-    <div class="progress-steps mb-8">
-        <div class="step completed">1</div>
-        <div class="step active">2</div>
-        <div class="step">3</div>
-    </div>
-
     <div class="form-card">
-        <form method="POST" action="/register" class="space-y-6">
+        <form method="POST" action="/edit/{{ project.id }}" class="space-y-6">
             <div class="form-group">
                 <label class="form-label" for="name">
-                    <i class="fas fa-project-diagram"></i>
+                    <i class="fas fa-project-diagram mr-2"></i>
                     Project Name
                 </label>
                 <input 
@@ -202,7 +142,7 @@
 
             <div class="form-group">
                 <label class="form-label" for="directory">
-                    <i class="fas fa-folder"></i>
+                    <i class="fas fa-folder mr-2"></i>
                     Project Directory
                 </label>
                 <input 
@@ -213,18 +153,12 @@
                     required 
                     value="{{ project.directory }}"
                 >
-                <span class="directory-browse">
-                    <i class="fas fa-folder-open"></i>
-                </span>
-                <p class="help-text">
-                    <i class="fas fa-info-circle"></i>
-                    Path to your project's root directory
-                </p>
+                <p class="help-text">Absolute path to your project's root directory</p>
             </div>
 
             <div class="form-group">
                 <label class="form-label" for="deploy_commands">
-                    <i class="fas fa-terminal"></i>
+                    <i class="fas fa-terminal mr-2"></i>
                     Deployment Commands
                 </label>
                 <input 
@@ -232,18 +166,15 @@
                     type="text" 
                     name="deploy_commands" 
                     id="deploy_commands" 
-                    value="{{ project.deploy_commands }}" 
-                    required
+                    required 
+                    value="{{ project.deploy_commands }}"
                 >
-                <p class="help-text">
-                    <i class="fas fa-info-circle"></i>
-                    Separate multiple commands with commas (e.g., npm install, npm build)
-                </p>
+                <p class="help-text">Separate multiple commands with commas (e.g., npm install, npm build)</p>
             </div>
 
             <div class="form-group">
                 <label class="form-label" for="github_token">
-                    <i class="fab fa-github"></i>
+                    <i class="fab fa-github mr-2"></i>
                     GitHub Token
                 </label>
                 <input 
@@ -251,18 +182,16 @@
                     type="password" 
                     name="github_token" 
                     id="github_token" 
-                    required
+                    required 
+                    value="{{ project.github_token }}"
                 >
-                <p class="help-text">
-                    <i class="fas fa-shield-alt"></i>
-                    Personal access token with repo and workflow permissions
-                </p>
+                <p class="help-text">Personal access token with repo and workflow permissions</p>
             </div>
 
             <div class="flex items-center justify-between pt-6">
                 <button class="form-button" type="submit">
-                    <i class="fas fa-plus"></i>
-                    Register Project
+                    <i class="fas fa-save"></i>
+                    Update Project
                 </button>
                 <button type="button" class="text-gray-400 hover:text-white transition-colors" onclick="location.href='/dashboard'">
                     Cancel
@@ -298,12 +227,6 @@
         const type = tokenInput.getAttribute('type') === 'password' ? 'text' : 'password';
         tokenInput.setAttribute('type', type);
         this.innerHTML = type === 'password' ? '<i class="fas fa-eye"></i>' : '<i class="fas fa-eye-slash"></i>';
-    });
-
-    // Directory browse button
-    document.querySelector('.directory-browse').addEventListener('click', function() {
-        // Implement directory browser functionality
-        alert('Directory browser functionality to be implemented');
     });
 </script>
 {% endblock %}

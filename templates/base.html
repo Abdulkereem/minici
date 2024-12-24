@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Base Title{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --sidebar-bg: #1a1a1a;
+            --sidebar-hover: #2d2d2d;
+            --accent-color: #4CAF50;
+            --text-primary: #e0e0e0;
+            --text-secondary: #a0a0a0;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', -apple-system, system-ui, sans-serif;
+            background: #1e1e1e;
+            color: var(--text-primary);
+        }
+
+        .sidebar {
+            background: var(--sidebar-bg);
+            border-right: 1px solid #333;
+            transition: all 0.3s ease;
+        }
+
+        .logo-section {
+            border-bottom: 1px solid #333;
+        }
+
+        .nav-item {
+            position: relative;
+            margin: 8px 12px;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .nav-item a {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: all 0.2s ease;
+        }
+
+        .nav-item:hover {
+            background: var(--sidebar-hover);
+        }
+
+        .nav-item.active {
+            background: var(--accent-color);
+        }
+
+        .nav-item.active a {
+            color: #000;
+        }
+
+        .nav-icon {
+            width: 20px;
+            height: 20px;
+            margin-right: 12px;
+            opacity: 0.7;
+        }
+
+        .nav-item:hover .nav-icon,
+        .nav-item.active .nav-icon {
+            opacity: 1;
+        }
+
+        .content-wrapper {
+            min-height: 100vh;
+        }
+
+        .project-status {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-left: auto;
+        }
+
+        .status-active {
+            background: var(--accent-color);
+            box-shadow: 0 0 8px rgba(76, 175, 80, 0.4);
+        }
+
+        .github-link {
+            color: var(--text-secondary);
+            padding: 8px 16px;
+            border-radius: 6px;
+            border: 1px solid #333;
+            transition: all 0.2s ease;
+        }
+
+        .github-link:hover {
+            border-color: var(--accent-color);
+            color: var(--accent-color);
+        }
+    </style>
+</head>
+<body>
+    <div class="flex">
+        <!-- Sidebar -->
+        <div class="sidebar w-72 min-h-screen flex flex-col">
+            <!-- Logo Section -->
+            <div class="logo-section h-16 flex items-center px-6">
+                <img class="h-8" src="path/to/minici-logo.png" alt="Minici Logo">
+                <h1 class="ml-3 text-xl font-semibold text-white">Minici</h1>
+            </div>
+
+            <!-- Navigation -->
+            <nav class="flex-1 py-6">
+                
+                <div class="nav-item {% if current_page == 'dashboard' %}active{% endif %}">
+                    <a href="/">
+                        <i class="fas fa-chart-line nav-icon"></i>
+                        Dashboard
+                    </a>
+                </div>
+                
+                <div class="nav-item {% if current_page == 'register' %}active{% endif %}">
+                    <a href="/register">
+                        <i class="fas fa-plus nav-icon"></i>
+                        Register Project
+                    </a>
+                </div>
+
+                <div class="nav-item {% if current_page == 'projects' %}active{% endif %}">
+                    <a href="/">
+                        <i class="fas fa-code-branch nav-icon"></i>
+                        Projects
+                        <span class="project-status status-active"></span>
+                    </a>
+                </div>
+
+                <div class="nav-item {% if current_page == 'terminal' %}active{% endif %}">
+                    <a href="/terminal">
+                        <i class="fas fa-terminal nav-icon"></i>
+                        Terminal
+                    </a>
+                </div>
+                
+                <div class="nav-item {% if current_page == 'settings' %}active{% endif %}">
+                    <a href="/settings">
+                        <i class="fas fa-cog nav-icon"></i>
+                        Settings
+                    </a>
+                </div>
+            </nav>
+
+            <!-- Footer -->
+            <div class="p-6 border-t border-gray-800">
+                <a href="https://github.com" class="github-link flex items-center justify-center gap-2">
+                    <i class="fab fa-github"></i>
+                    Connect GitHub
+                </a>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="flex-1 content-wrapper">
+            {% block content %}{% endblock %}
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</body>
+</html>
