@@ -160,6 +160,32 @@ def rebuild(project_id):
     return redirect('/')
 
 
+@app.route('/run-command/<int:project_id>', methods=['POST', 'GET'])
+@login_required
+def run_command(project_id):
+    project = Project.query.get(project_id)
+    if project:
+        if request.method == 'POST':
+            print(request.json)
+            command = request.json['command']
+            os.chdir(project.directory)
+            
+            # Capture the output of the command
+            result = subprocess.run(command.split(','), shell=True, capture_output=True, text=True)
+
+            # Return the output as a JSON response
+            return jsonify({
+                'output': result.stdout,
+                'error': result.stderr,
+                'returncode': result.returncode
+            })
+        else:  # Handle GET request
+            return render_template('terminal_output.html', output='', error='', returncode=0, project=project)
+
+    return jsonify({'error': 'Project not found.'}), 404
+
+
+
 @app.route('/terminal', methods=['POST', 'GET'])
 @login_required
 def terminal():
