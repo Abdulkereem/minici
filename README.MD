@@ -28,7 +28,7 @@ The frontend of Minici is built using HTML, CSS (with the Tailwind CSS framework
 
 1. Clone the Minici repository:
    ```shell
-   git clone https://github.com/your-username/minici.git
+   git clone https://github.com/Abdulkereem/minici.git
    cd minici
    pip install -r requirements.txt
 
