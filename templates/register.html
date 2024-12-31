@@ -3,6 +3,7 @@
 {% block title %}Register Project{% endblock %}
 
 {% block content %}
+<!-- Previous styles remain unchanged -->
 <style>
     :root {
         --form-bg: #2d2d2d;
@@ -119,51 +120,6 @@
     .form-input:invalid + .validation-error {
         display: block;
     }
-
-    .progress-steps {
-        display: flex;
-        justify-content: space-between;
-        margin-bottom: 32px;
-        position: relative;
-    }
-
-    .progress-steps::before {
-        content: '';
-        position: absolute;
-        top: 14px;
-        left: 0;
-        right: 0;
-        height: 2px;
-        background: #333;
-        z-index: 0;
-    }
-
-    .step {
-        background: var(--form-bg);
-        border: 2px solid #333;
-        width: 30px;
-        height: 30px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 14px;
-        font-weight: 500;
-        color: var(--text-secondary);
-        position: relative;
-        z-index: 1;
-    }
-
-    .step.active {
-        border-color: var(--accent-color);
-        color: var(--accent-color);
-    }
-
-    .step.completed {
-        background: var(--accent-color);
-        border-color: var(--accent-color);
-        color: #000;
-    }
 </style>
 
 <div class="register-container">
@@ -175,14 +131,9 @@
         </a>
     </div>
 
-    <div class="progress-steps mb-8">
-        <div class="step completed">1</div>
-        <div class="step active">2</div>
-        <div class="step">3</div>
-    </div>
-
     <div class="form-card">
         <form method="POST" action="/register" class="space-y-6">
+            <!-- Project Details Section -->
             <div class="form-group">
                 <label class="form-label" for="name">
                     <i class="fas fa-project-diagram"></i>
@@ -216,12 +167,86 @@
                 <span class="directory-browse">
                     <i class="fas fa-folder-open"></i>
                 </span>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="domain_name">
+                    <i class="fas fa-globe"></i>
+                    Domain Name
+                </label>
+                <input 
+                    class="form-input" 
+                    type="text" 
+                    name="domain_name" 
+                    id="domain_name" 
+                    value="{{ project.domain_name }}"
+                >
                 <p class="help-text">
                     <i class="fas fa-info-circle"></i>
-                    Path to your project's root directory
+                    Domain where the project will be deployed (optional)
                 </p>
             </div>
 
+            <div class="form-group">
+                <label class="form-label" for="port">
+                    <i class="fas fa-plug"></i>
+                    Port
+                </label>
+                <input 
+                    class="form-input" 
+                    type="text" 
+                    name="port" 
+                    id="port" 
+                    value="{{ project.port }}"
+                    pattern="^[0-9]+$"
+                >
+                <p class="help-text">
+                    <i class="fas fa-info-circle"></i>
+                    Port number for the application to run on
+                </p>
+                <div class="validation-error">Please enter a valid port number</div>
+            </div>
+
+            <!-- Git Repository Section -->
+            <div class="form-group">
+                <label class="form-label" for="git_repo">
+                    <i class="fab fa-git"></i>
+                    Git Repository URL
+                </label>
+                <input 
+                    class="form-input" 
+                    type="text" 
+                    name="git_repo" 
+                    id="git_repo" 
+                    value="{{ project.git_repo }}"
+                    required
+                >
+                <p class="help-text">
+                    <i class="fas fa-info-circle"></i>
+                    Full URL of your Git repository
+                </p>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="branch">
+                    <i class="fas fa-code-branch"></i>
+                    Branch
+                </label>
+                <input 
+                    class="form-input" 
+                    type="text" 
+                    name="branch" 
+                    id="branch" 
+                    value="{{ project.branch }}"
+                    required
+                >
+                <p class="help-text">
+                    <i class="fas fa-info-circle"></i>
+                    Branch to deploy from (e.g., main, master)
+                </p>
+            </div>
+
+            <!-- Deployment Section -->
             <div class="form-group">
                 <label class="form-label" for="deploy_commands">
                     <i class="fas fa-terminal"></i>
@@ -238,6 +263,25 @@
                 <p class="help-text">
                     <i class="fas fa-info-circle"></i>
                     Separate multiple commands with commas (e.g., npm install, npm build)
+                </p>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="depoloy_triger">
+                    <i class="fas fa-play-circle"></i>
+                    Deploy Trigger
+                </label>
+                <input 
+                    class="form-input" 
+                    type="text" 
+                    name="depoloy_triger" 
+                    id="depoloy_triger" 
+                    value="{{ project.depoloy_triger }}"
+                    required
+                >
+                <p class="help-text">
+                    <i class="fas fa-info-circle"></i>
+                    Event that triggers deployment (e.g., push, manual)
                 </p>
             </div>
 

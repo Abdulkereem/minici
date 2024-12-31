@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+
+{% block title %}File Management - Minici{% endblock %}
+
+{% block content %}
+<div class="p-8">
+    <!-- Header Section -->
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-white mb-2">File Management</h1>
+        <div class="text-gray-400 flex items-center space-x-2">
+            <i class="fas fa-folder-open"></i>
+            <span>Current Directory: {{ current_dir if current_dir else 'Root' }}</span>
+        </div>
+    </div>
+
+    <!-- Directory Navigation and Upload Section -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        <!-- Directory Navigation -->
+        <div class="bg-[#1a1a1a] rounded-lg p-6 border border-gray-800">
+            <h2 class="text-xl font-semibold text-white mb-4">Directories</h2>
+            <div class="space-y-2">
+                <a href="{{ url_for('file_management') }}" 
+                   class="flex items-center space-x-2 p-2 rounded hover:bg-[#2d2d2d] text-gray-300 {% if not current_dir %}bg-[#4CAF50] text-black{% endif %}">
+                    <i class="fas fa-home"></i>
+                    <span>Root</span>
+                </a>
+                {% for directory in directories %}
+                <a href="{{ url_for('file_management', dir=directory.path) }}" 
+                   class="flex items-center space-x-2 p-2 rounded hover:bg-[#2d2d2d] text-gray-300 {% if current_dir == directory.path %}bg-[#4CAF50] text-black{% endif %}">
+                    <i class="fas fa-folder"></i>
+                    <span>{{ directory.name }}</span>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Upload Form -->
+        <div class="bg-[#1a1a1a] rounded-lg p-6 border border-gray-800">
+            <h2 class="text-xl font-semibold text-white mb-4">Upload File</h2>
+            <form action="{{ url_for('file_management', dir=current_dir) }}" method="post" enctype="multipart/form-data" class="space-y-4">
+                <div class="flex flex-col space-y-2">
+                    <label class="text-gray-400">Select File</label>
+                    <input type="file" name="file" class="bg-[#2d2d2d] text-gray-300 p-2 rounded border border-gray-700 focus:border-[#4CAF50] focus:outline-none">
+                </div>
+                <button type="submit" class="w-full bg-[#4CAF50] hover:bg-[#45a049] text-black font-semibold py-2 px-4 rounded transition duration-200">
+                    Upload File
+                </button>
+            </form>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="bg-[#1a1a1a] rounded-lg p-6 border border-gray-800">
+            <h2 class="text-xl font-semibold text-white mb-4">Directory Stats</h2>
+            <div class="space-y-4">
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-400">Total Files:</span>
+                    <span class="text-white font-semibold">{{ files|length }}</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-400">Total Directories:</span>
+                    <span class="text-white font-semibold">{{ directories|length }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- File Listing -->
+    <div class="bg-[#1a1a1a] rounded-lg border border-gray-800">
+        <div class="p-6">
+            <h2 class="text-xl font-semibold text-white mb-4">Files</h2>
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="mb-4 p-4 rounded {% if category == 'success' %}bg-green-800/50 text-green-200{% else %}bg-red-800/50 text-red-200{% endif %}">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead>
+                        <tr class="text-left border-b border-gray-800">
+                            <th class="pb-3 text-gray-400 font-medium">Name</th>
+                            <th class="pb-3 text-gray-400 font-medium">Type</th>
+                            <th class="pb-3 text-gray-400 font-medium">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for file in files %}
+                        <tr class="border-b border-gray-800 hover:bg-[#2d2d2d]">
+                            <td class="py-3 text-gray-300">
+                                <a href="{{ url_for('file_management', dir=file.path) }}" class="flex items-center space-x-2">
+                                    <i class="fas {% if '.' in file %}fa-file{% else %}fa-folder{% endif %} text-gray-400"></i>
+                                    <span>{{ file.name }}</span>
+                                </a>
+                            </td>
+                            <td class="py-3 text-gray-300">
+                                {{ file.split('.')[-1].upper() if '.' in file else 'Directory' }}
+                            </td>
+                            <td class="py-3">
+                                <div class="flex space-x-2">
+                                    <a href="#" class="text-blue-400 hover:text-blue-300" title="Download">
+                                        <i class="fas fa-download"></i>
+                                    </a>
+                                    <a href="#" class="text-red-400 hover:text-red-300" title="Delete">
+                                        <i class="fas fa-trash"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

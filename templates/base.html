@@ -116,8 +116,7 @@
 
             <!-- Navigation -->
             <nav class="flex-1 py-6">
-                
-                <div class="nav-item {% if current_page == 'dashboard' %}active{% endif %}">
+                <div class="nav-item {% if current_page == '/' %}active{% endif %}">
                     <a href="/">
                         <i class="fas fa-chart-line nav-icon"></i>
                         Dashboard
@@ -132,9 +131,17 @@
                 </div>
 
                 <div class="nav-item {% if current_page == 'projects' %}active{% endif %}">
-                    <a href="/">
+                    <a href="/projects">
                         <i class="fas fa-code-branch nav-icon"></i>
                         Projects
+                        <span class="project-status status-active"></span>
+                    </a>
+                </div>
+
+                <div class="nav-item {% if current_page == 'files' %}active{% endif %}">
+                    <a href="/files">
+                        <i class="fas fa-folder nav-icon"></i>
+                        File Management
                         <span class="project-status status-active"></span>
                     </a>
                 </div>

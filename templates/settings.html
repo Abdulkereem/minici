@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+
+{% block title %}Settings - Minici{% endblock %}
+
+{% block content %}
+<div class="p-8">
+    <!-- Header -->
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-white">Settings</h1>
+        <p class="text-gray-400 mt-2">Manage your system settings and user preferences</p>
+    </div>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="mb-4 p-4 rounded-md {% if category == 'danger' %}bg-red-900/50 text-red-200{% elif category == 'success' %}bg-green-900/50 text-green-200{% else %}bg-blue-900/50 text-blue-200{% endif %}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <!-- System Information -->
+        <div class="bg-[#1a1a1a] rounded-lg border border-gray-800 p-6">
+            <h2 class="text-xl font-semibold text-white mb-6 flex items-center">
+                <i class="fas fa-server mr-3"></i>
+                System Information
+            </h2>
+            <div class="space-y-4">
+                <div class="flex justify-between items-center p-3 bg-[#2d2d2d] rounded-md">
+                    <span class="text-gray-400">Operating System</span>
+                    <span class="text-white">{{ os_info }}</span>
+                </div>
+                <div class="flex justify-between items-center p-3 bg-[#2d2d2d] rounded-md">
+                    <span class="text-gray-400">IP Address</span>
+                    <span class="text-white">{{ ip_address }}</span>
+                </div>
+                <div class="flex justify-between items-center p-3 bg-[#2d2d2d] rounded-md">
+                    <span class="text-gray-400">Python Version</span>
+                    <span class="text-white">{{ python_version }}</span>
+                </div>
+                <div class="flex justify-between items-center p-3 bg-[#2d2d2d] rounded-md">
+                    <span class="text-gray-400">CPU Usage</span>
+                    <span class="text-white">{{ cpu_usage }}%</span>
+                </div>
+                <div class="flex justify-between items-center p-3 bg-[#2d2d2d] rounded-md">
+                    <span class="text-gray-400">Memory Usage</span>
+                    <span class="text-white">{{ memory_usage }}%</span>
+                </div>
+                <div class="flex justify-between items-center p-3 bg-[#2d2d2d] rounded-md">
+                    <span class="text-gray-400">Disk Usage</span>
+                    <span class="text-white">{{ disk_usage }}%</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- User Profile -->
+        <div class="bg-[#1a1a1a] rounded-lg border border-gray-800 p-6">
+            <h2 class="text-xl font-semibold text-white mb-6 flex items-center">
+                <i class="fas fa-user mr-3"></i>
+                User Profile
+            </h2>
+            <form method="POST" action="{{ url_for('update_profile') }}" class="space-y-4">
+                <div>
+                    <label class="block text-gray-400 mb-2">Username</label>
+                    <input type="text" name="username" value="{{ current_user.username }}" 
+                           class="w-full bg-[#2d2d2d] text-white rounded-md border border-gray-700 p-3 focus:border-[#4CAF50] focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-gray-400 mb-2">Email</label>
+                    <input type="email" name="email" value="{{ current_user.email }}" 
+                           class="w-full bg-[#2d2d2d] text-white rounded-md border border-gray-700 p-3 focus:border-[#4CAF50] focus:outline-none">
+                </div>
+                <button type="submit" class="w-full bg-[#4CAF50] text-black font-semibold py-3 rounded-md hover:bg-[#45a049] transition-colors">
+                    Update Profile
+                </button>
+            </form>
+        </div>
+
+        <!-- Change Password -->
+        <div class="bg-[#1a1a1a] rounded-lg border border-gray-800 p-6">
+            <h2 class="text-xl font-semibold text-white mb-6 flex items-center">
+                <i class="fas fa-lock mr-3"></i>
+                Change Password
+            </h2>
+            <form method="POST" action="{{ url_for('change_password') }}" class="space-y-4">
+                <div>
+                    <label class="block text-gray-400 mb-2">Current Password</label>
+                    <input type="password" name="current_password" 
+                           class="w-full bg-[#2d2d2d] text-white rounded-md border border-gray-700 p-3 focus:border-[#4CAF50] focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-gray-400 mb-2">New Password</label>
+                    <input type="password" name="new_password" 
+                           class="w-full bg-[#2d2d2d] text-white rounded-md border border-gray-700 p-3 focus:border-[#4CAF50] focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-gray-400 mb-2">Confirm New Password</label>
+                    <input type="password" name="confirm_password" 
+                           class="w-full bg-[#2d2d2d] text-white rounded-md border border-gray-700 p-3 focus:border-[#4CAF50] focus:outline-none">
+                </div>
+                <button type="submit" class="w-full bg-[#4CAF50] text-black font-semibold py-3 rounded-md hover:bg-[#45a049] transition-colors">
+                    Change Password
+                </button>
+            </form>
+        </div>
+
+        <!-- User Management -->
+        <div class="bg-[#1a1a1a] rounded-lg border border-gray-800 p-6">
+            <h2 class="text-xl font-semibold text-white mb-6 flex items-center">
+                <i class="fas fa-users mr-3"></i>
+                User Management
+            </h2>
+            <!-- Create New User Form -->
+            <form method="POST" action="{{ url_for('create_user') }}" class="mb-6 space-y-4">
+                <div>
+                    <label class="block text-gray-400 mb-2">New Username</label>
+                    <input type="text" name="new_username" 
+                           class="w-full bg-[#2d2d2d] text-white rounded-md border border-gray-700 p-3 focus:border-[#4CAF50] focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-gray-400 mb-2">Email</label>
+                    <input type="email" name="new_email" 
+                           class="w-full bg-[#2d2d2d] text-white rounded-md border border-gray-700 p-3 focus:border-[#4CAF50] focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-gray-400 mb-2">Password</label>
+                    <input type="password" name="new_user_password" 
+                           class="w-full bg-[#2d2d2d] text-white rounded-md border border-gray-700 p-3 focus:border-[#4CAF50] focus:outline-none">
+                </div>
+                <button type="submit" class="w-full bg-[#4CAF50] text-black font-semibold py-3 rounded-md hover:bg-[#45a049] transition-colors">
+                    Create New User
+                </button>
+            </form>
+
+            <!-- User List -->
+            <div class="mt-6">
+                <h3 class="text-lg font-semibold text-white mb-4">Existing Users</h3>
+                <div class="space-y-2">
+                    {% for user in users %}
+                    <div class="flex items-center justify-between p-3 bg-[#2d2d2d] rounded-md">
+                        <div class="flex items-center">
+                            <i class="fas fa-user-circle text-gray-400 mr-3"></i>
+                            <div>
+                                <p class="text-white">{{ user.username }}</p>
+                                <p class="text-gray-400 text-sm">{{ user.email }}</p>
+                            </div>
+                        </div>
+                        {% if current_user.is_admin and user.id != current_user.id %}
+                        <form method="POST" action="{{ url_for('delete_user', user_id=user.id) }}" class="inline">
+                                        <button type="submit" class="text-red-400 hover:text-red-300 transition-colors" 
+                                    onclick="return confirm('Are you sure you want to delete this user?')">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </form>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Real-time system info updates
+    function updateSystemInfo() {
+        fetch('/api/system-info')
+            .then(response => response.json())
+            .then(data => {
+                document.querySelector('[data-cpu-usage]').textContent = `${data.cpu_usage}%`;
+                document.querySelector('[data-memory-usage]').textContent = `${data.memory_usage}%`;
+                document.querySelector('[data-disk-usage]').textContent = `${data.disk_usage}%`;
+            });
+    }
+
+    // Update system info every 30 seconds
+    setInterval(updateSystemInfo, 30000);
+});
+
+</script>
+{% endblock %}

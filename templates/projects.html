@@ -1,0 +1,173 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<style>
+    :root {
+        --card-bg: #2d2d2d;
+        --hover-bg: #363636;
+        --accent-green: #4CAF50;
+        --accent-yellow: #FFC107;
+        --accent-blue: #2196F3;
+        --accent-purple: #9C27B0;
+        --accent-red: #f44336;
+        --text-primary: #e0e0e0;
+        --text-secondary: #a0a0a0;
+    }
+
+    .dashboard-container {
+        padding: 24px;
+        max-width: 1400px;
+        margin: 0 auto;
+    }
+
+    .project-card {
+        background: var(--card-bg);
+        border: 1px solid #333;
+        border-radius: 8px;
+        transition: all 0.2s ease;
+    }
+
+    .project-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    .status-badge {
+        background: var(--accent-green);
+        font-size: 0.875rem;
+        padding: 4px 12px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .status-badge::before {
+        content: '';
+        display: inline-block;
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: currentColor;
+        animation: pulse 2s infinite;
+    }
+
+    .action-button {
+        padding: 8px 16px;
+        border-radius: 6px;
+        font-weight: 500;
+        transition: all 0.2s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        border: 1px solid transparent;
+    }
+
+    .action-button:hover {
+        transform: translateY(-1px);
+    }
+
+    .action-button i {
+        font-size: 14px;
+    }
+
+    .btn-accept { background: var(--accent-green); color: #000; }
+    .btn-accept:hover { background: #43A047; }
+
+    .btn-rebuild { background: var(--accent-yellow); color: #000; }
+    .btn-rebuild:hover { background: #FFB300; }
+
+    .btn-deploy { background: var(--accent-blue); color: white; }
+    .btn-deploy:hover { background: #1E88E5; }
+
+    .btn-command { background: var(--accent-purple); color: white; }
+    .btn-command:hover { background: #8E24AA; }
+
+    .btn-edit { 
+        background: transparent; 
+        border-color: #555;
+        color: var(--text-secondary);
+    }
+    .btn-edit:hover { 
+        border-color: var(--text-primary);
+        color: var(--text-primary);
+    }
+
+    .btn-delete { background: var(--accent-red); color: white; }
+    .btn-delete:hover { background: #E53935; }
+
+    @keyframes pulse {
+        0% { opacity: 1; }
+        50% { opacity: 0.5; }
+        100% { opacity: 1; }
+    }
+</style>
+
+<div class="dashboard-container">
+    <h1 class="text-3xl font-bold mb-8 text-white">Dashboard</h1>
+    
+    <div class="grid gap-6">
+        {% for project in projects %}
+        <div class="project-card p-6">
+            <div class="flex justify-between items-center mb-6">
+                <div class="flex items-center gap-4">
+                    <h2 class="text-xl font-semibold text-white">{{ project.name }}</h2>
+                    {% if project.updated %}
+                    <span class="status-badge">Updated</span>
+                    {% endif %}
+                </div>
+                <div class="text-sm text-gray-400">
+                    Project ID: {{ project.id }}
+                </div>
+            </div>
+            
+            <div class="flex flex-wrap gap-3">
+                <button class="action-button btn-accept" data-project-id="{{ project.id }}">
+                    <i class="fas fa-check"></i>
+                    Accept
+                </button>
+                
+                <a href="/rebuild/{{ project.id }}" class="action-button btn-rebuild">
+                    <i class="fas fa-sync"></i>
+                    Rebuild
+                </a>
+                
+                <button class="action-button btn-deploy" data-deploy-id="{{ project.id }}">
+                    <i class="fas fa-rocket"></i>
+                    Deploy
+                </button>
+                
+                <a href="/run-command/{{ project.id }}" class="action-button btn-command">
+                    <i class="fas fa-terminal"></i>
+                    Run Command
+                </a>
+                
+                <a href="/edit/{{ project.id }}" class="action-button btn-edit">
+                    <i class="fas fa-pencil-alt"></i>
+                    Edit
+                </a>
+                
+                <button class="action-button btn-delete" data-delete-id="{{ project.id }}">
+                    <i class="fas fa-trash-alt"></i>
+                    Delete
+                </button>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<script>
+    // Add confirmation dialogs for destructive actions
+    document.querySelectorAll('[data-delete-id]').forEach(button => {
+        button.addEventListener('click', (e) => {
+            const projectId = e.target.dataset.deleteId;
+            if (confirm('Are you sure you want to delete this project? This action cannot be undone.')) {
+                window.location = `/delete/${projectId}`
+            }
+        });
+    });
+</script>
+{% endblock %}
