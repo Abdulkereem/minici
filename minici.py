@@ -17,6 +17,7 @@ import queue
 from datetime import datetime
 import threading
 import json
+from gateway import *
 
 
 
@@ -972,6 +973,133 @@ def github_webhook(hook_id):
         thread.start()
         return jsonify({'message': 'Deployment started'}), 202
     return jsonify({'message': 'No action taken'}), 200
+
+
+
+
+
+@app.route('/domains')
+def domains():
+    projects = Project.query.all()
+    active_domains = [p for p in projects if p.domain_name and p.is_deployed]
+    pending_domains = [p for p in projects if p.domain_name and not p.is_deployed]
+    
+    return render_template('domains.html', 
+                         domains=active_domains + pending_domains,
+                         projects=projects,
+                         current_page='domains')
+
+@app.route('/domains/add', methods=['POST'])
+def add_domain():
+    domain = request.form.get('domain')
+    project_id = request.form.get('project')
+    
+    if not domain:
+        return jsonify({'success': False, 'error': 'Domain name is required'})
+    
+    try:
+        project = Project.query.get(project_id)
+        if not project:
+            return jsonify({'success': False, 'error': 'Project not found'})
+        
+        # Update project with domain
+        project.domain_name = domain
+        db.session.commit()
+        
+        # Generate and save Nginx config
+        config = generate_nginx_config(domain, project.port)
+        config_path = f'/etc/nginx/sites-available/{domain}'
+        
+        # Write configuration file
+        with open(config_path, 'w') as f:
+            f.write(config)
+        
+        # Create symlink in sites-enabled
+        symlink_path = f'/etc/nginx/sites-enabled/{domain}'
+        if not os.path.exists(symlink_path):
+            os.symlink(config_path, symlink_path)
+        
+        # Reload Nginx
+        success, message = reload_nginx()
+        if not success:
+            # Cleanup on failure
+            os.remove(config_path)
+            if os.path.exists(symlink_path):
+                os.remove(symlink_path)
+            return jsonify({'success': False, 'error': f'Failed to reload Nginx: {message}'})
+        
+        flash('Domain added successfully', 'success')
+        return jsonify({'success': True})
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/domains/delete/<int:project_id>')
+def delete_domain(project_id):
+    try:
+        project = Project.query.get(project_id)
+        if not project or not project.domain_name:
+            flash('Domain not found', 'error')
+            return redirect(url_for('domains'))
+        
+        domain = project.domain_name
+        
+        # Remove Nginx configuration
+        config_path = f'/etc/nginx/sites-available/{domain}'
+        symlink_path = f'/etc/nginx/sites-enabled/{domain}'
+        
+        if os.path.exists(config_path):
+            os.remove(config_path)
+        if os.path.exists(symlink_path):
+            os.remove(symlink_path)
+        
+        # Remove domain from project
+        project.domain_name = None
+        db.session.commit()
+        
+        # Reload Nginx
+        success, message = reload_nginx()
+        if not success:
+            flash(f'Failed to reload Nginx: {message}', 'error')
+            return redirect(url_for('domains'))
+        
+        flash('Domain removed successfully', 'success')
+        
+    except Exception as e:
+        flash(f'Error removing domain: {str(e)}', 'error')
+    
+    return redirect(url_for('domains'))
+
+@app.route('/domains/verify/<int:project_id>')
+def verify_domain(project_id):
+    try:
+        project = Project.query.get(project_id)
+        if not project or not project.domain_name:
+            flash('Domain not found', 'error')
+            return redirect(url_for('domains'))
+        
+        # Check if the project is running
+        if not project.is_deployed:
+            flash('Project must be deployed before verifying domain', 'warning')
+            return redirect(url_for('domains'))
+        
+        # Verify Nginx configuration
+        success, message = reload_nginx()
+        if not success:
+            flash(f'Domain verification failed: {message}', 'error')
+            return redirect(url_for('domains'))
+        
+        flash('Domain verified successfully', 'success')
+        
+    except Exception as e:
+        flash(f'Error verifying domain: {str(e)}', 'error')
+    
+    return redirect(url_for('domains'))
+
+
+
+
+
 
 
 

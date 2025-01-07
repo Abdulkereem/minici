@@ -1,0 +1,275 @@
+{% extends 'base.html' %}
+
+{% block title %}Domains{% endblock %}
+
+{% block content %}
+<style>
+    :root {
+        --card-bg: #2d2d2d;
+        --hover-bg: #363636;
+        --accent-green: #4CAF50;
+        --accent-yellow: #FFC107;
+        --accent-blue: #2196F3;
+        --accent-red: #f44336;
+        --text-primary: #e0e0e0;
+        --text-secondary: #a0a0a0;
+    }
+
+    .domain-container {
+        padding: 24px;
+        max-width: 1400px;
+        margin: 0 auto;
+    }
+
+    .domain-card {
+        background: var(--card-bg);
+        border: 1px solid #333;
+        border-radius: 8px;
+        transition: all 0.2s ease;
+    }
+
+    .domain-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    .status-badge {
+        font-size: 0.875rem;
+        padding: 4px 12px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .status-active {
+        background: var(--accent-green);
+        color: #000;
+    }
+
+    .status-pending {
+        background: var(--accent-yellow);
+        color: #000;
+    }
+
+    .action-button {
+        padding: 8px 16px;
+        border-radius: 6px;
+        font-weight: 500;
+        transition: all 0.2s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        border: 1px solid transparent;
+    }
+
+    .action-button:hover {
+        transform: translateY(-1px);
+    }
+
+    .btn-add {
+        background: var(--accent-green);
+        color: #000;
+    }
+
+    .btn-add:hover {
+        background: #43A047;
+    }
+
+    .btn-verify {
+        background: var(--accent-blue);
+        color: white;
+    }
+
+    .btn-verify:hover {
+        background: #1E88E5;
+    }
+
+    .btn-delete {
+        background: transparent;
+        border-color: #555;
+        color: var(--text-secondary);
+    }
+
+    .btn-delete:hover {
+        border-color: var(--accent-red);
+        color: var(--accent-red);
+    }
+
+    /* Modal styles */
+    .modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.7);
+        z-index: 1000;
+    }
+
+    .modal.show {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .modal-content {
+        background: var(--card-bg);
+        border-radius: 8px;
+        max-width: 500px;
+        width: 90%;
+        padding: 24px;
+    }
+
+    .input-field {
+        width: 100%;
+        padding: 8px 12px;
+        border-radius: 6px;
+        background: #1a1a1a;
+        border: 1px solid #333;
+        color: var(--text-primary);
+        margin-top: 8px;
+    }
+
+    .input-field:focus {
+        border-color: var(--accent-blue);
+        outline: none;
+    }
+</style>
+
+<div class="domain-container">
+    <div class="flex justify-between items-center mb-8">
+        <h1 class="text-3xl font-bold text-white">Domain Management</h1>
+        <button class="action-button btn-add" onclick="showAddDomainModal()">
+            <i class="fas fa-plus"></i>
+            Add Domain
+        </button>
+    </div>
+
+    <div class="grid gap-6">
+        {% for project in projects if project.domain_name %}
+        <div class="domain-card p-6">
+            <div class="flex justify-between items-center mb-4">
+                <div class="flex items-center gap-4">
+                    <h2 class="text-xl font-semibold text-white">{{ project.domain_name }}</h2>
+                    <span class="status-badge {% if project.is_deployed %}status-active{% else %}status-pending{% endif %}">
+                        <i class="fas fa-{% if project.is_deployed %}check-circle{% else %}clock{% endif %}"></i>
+                        {{ 'Active' if project.is_deployed else 'Pending' }}
+                    </span>
+                </div>
+                <div class="flex gap-3">
+                    {% if not project.is_deployed %}
+                    <button class="action-button btn-verify" onclick="window.location.href='/domains/verify/{{ project.id }}'">
+                        <i class="fas fa-shield-alt"></i>
+                        Verify DNS
+                    </button>
+                    {% endif %}
+                    <button class="action-button btn-delete" onclick="confirmDelete('{{ project.id }}')">
+                        <i class="fas fa-trash-alt"></i>
+                        Remove
+                    </button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4 text-sm text-gray-400">
+                <div>
+                    <p class="mb-2">
+                        <i class="fas fa-code-branch mr-2"></i>
+                        Project: {{ project.name }}
+                    </p>
+                    <p>
+                        <i class="fas fa-network-wired mr-2"></i>
+                        Port: {{ project.port }}
+                    </p>
+                </div>
+                <div>
+                    <p class="mb-2">
+                        <i class="fas fa-rocket mr-2"></i>
+                        Status: {{ 'Deployed' if project.is_deployed else 'Not Deployed' }}
+                    </p>
+                    <p>
+                        <i class="fas fa-folder mr-2"></i>
+                        Directory: {{ project.directory }}
+                    </p>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Add Domain Modal -->
+<div id="addDomainModal" class="modal">
+    <div class="modal-content">
+        <div class="flex justify-between items-center mb-6">
+            <h3 class="text-xl font-semibold text-white">Add New Domain</h3>
+            <button onclick="hideAddDomainModal()" class="text-gray-400 hover:text-white">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <form id="addDomainForm" onsubmit="handleAddDomain(event)">
+            <div class="mb-4">
+                <label class="block text-sm font-medium mb-1">Domain Name</label>
+                <input type="text" name="domain" class="input-field" placeholder="example.com" required>
+            </div>
+
+            <div class="mb-4">
+                <label class="block text-sm font-medium mb-1">Project</label>
+                <select name="project" class="input-field" required>
+                    <option value="">Select a project</option>
+                    {% for project in projects %}
+                    <option value="{{ project.id }}">{{ project.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="flex justify-end gap-3 mt-6">
+                <button type="button" onclick="hideAddDomainModal()" class="action-button btn-delete">
+                    Cancel
+                </button>
+                <button type="submit" class="action-button btn-add">
+                    Add Domain
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function showAddDomainModal() {
+        document.getElementById('addDomainModal').classList.add('show');
+    }
+
+    function hideAddDomainModal() {
+        document.getElementById('addDomainModal').classList.remove('show');
+    }
+
+    function confirmDelete(projectId) {
+        if (confirm('Are you sure you want to remove this domain? This action cannot be undone.')) {
+            window.location = `/domains/delete/${projectId}`;
+        }
+    }
+
+    function handleAddDomain(event) {
+        event.preventDefault();
+        const formData = new FormData(event.target);
+        fetch('/domains/add', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert(data.error || 'Failed to add domain');
+            }
+        })
+        .catch(error => {
+            alert('An error occurred while adding the domain');
+        });
+    }
+</script>
+{% endblock %}
