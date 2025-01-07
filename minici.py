@@ -891,7 +891,8 @@ def github_webhook(hook_id):
         return jsonify({'error': 'Project not found'}), 404
 
     # Check if the trigger condition is met
-    if project.deploy_triger == 'push' and 'commits' in data:  # Adjust this condition based on your requirements
+    branch = data.get('ref', '').split('/')[-1]
+    if project.deploy_triger == 'push' and 'commits' in data and branch==project.branch:  # Adjust this condition based on your requirements
         # Create a new logger for this deployment
         logger = DeploymentLogger(project.id)
         deployment_logs[project.id] = logger
