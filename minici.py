@@ -361,6 +361,7 @@ def deploy(project_id):
                             logger.add_log(result.stderr, "WARNING")
 
                     project.updated = False
+                    project.is_deployed = True
                     db.session.commit()
                     
                     logger.add_log("Deployment completed successfully")
@@ -962,6 +963,7 @@ def github_webhook(hook_id):
                             logger.add_log(result.stderr, "WARNING")
 
                     project.updated = False
+                    project.is_deployed = True
                     db.session.commit()
                     logger.add_log("Deployment completed successfully")
                 except Exception as e:
