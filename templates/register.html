@@ -145,29 +145,12 @@
                     name="name" 
                     id="name" 
                     required 
-                    value="{{ project.name }}"
                     pattern="[A-Za-z0-9-_]+"
                 >
                 <div class="validation-error">Project name can only contain letters, numbers, hyphens, and underscores</div>
             </div>
 
-            <div class="form-group">
-                <label class="form-label" for="directory">
-                    <i class="fas fa-folder"></i>
-                    Project Directory
-                </label>
-                <input 
-                    class="form-input" 
-                    type="text" 
-                    name="directory" 
-                    id="directory" 
-                    required 
-                    value="{{ project.directory }}"
-                >
-                <span class="directory-browse">
-                    <i class="fas fa-folder-open"></i>
-                </span>
-            </div>
+      
 
             <div class="form-group">
                 <label class="form-label" for="domain_name">
@@ -178,8 +161,7 @@
                     class="form-input" 
                     type="text" 
                     name="domain_name" 
-                    id="domain_name" 
-                    value="{{ project.domain_name }}"
+                    id="domain_name"
                 >
                 <p class="help-text">
                     <i class="fas fa-info-circle"></i>
@@ -197,7 +179,6 @@
                     type="text" 
                     name="port" 
                     id="port" 
-                    value="{{ project.port }}"
                     pattern="^[0-9]+$"
                 >
                 <p class="help-text">
@@ -218,12 +199,11 @@
                     type="text" 
                     name="git_repo" 
                     id="git_repo" 
-                    value="{{ project.git_repo }}"
                     required
                 >
                 <p class="help-text">
                     <i class="fas fa-info-circle"></i>
-                    Full URL of your Git repository
+                    URL of your Git repository (e.g Username/repo.git)
                 </p>
             </div>
 
@@ -237,7 +217,6 @@
                     type="text" 
                     name="branch" 
                     id="branch" 
-                    value="{{ project.branch }}"
                     required
                 >
                 <p class="help-text">
@@ -257,7 +236,6 @@
                     type="text" 
                     name="deploy_commands" 
                     id="deploy_commands" 
-                    value="{{ project.deploy_commands }}" 
                     required
                 >
                 <p class="help-text">
@@ -274,9 +252,8 @@
                 <input 
                     class="form-input" 
                     type="text" 
-                    name="depoloy_triger" 
+                    name="deploy_triger" 
                     id="depoloy_triger" 
-                    value="{{ project.depoloy_triger }}"
                     required
                 >
                 <p class="help-text">

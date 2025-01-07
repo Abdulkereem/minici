@@ -12,8 +12,7 @@
         <div class="border border-gray-200 rounded p-4">
             <h2 class="text-xl mb-4">Confirm Deployment</h2>
             <p class="mb-4">You are about to deploy the project to production. This action cannot be undone.</p>
-            <form action="/deploy/{{ project_id }}" method="POST">
-                <input type="hidden" name="confirm" value="yes">
+            <form action="/deploy/{{ project.id }}" method="POST">
                 <button class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded" type="submit">Deploy</button>
                 <a class="text-blue-500 hover:underline ml-4" href="/">Cancel</a>
             </form>

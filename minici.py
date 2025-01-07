@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, flash, jsonify, send_from_directory, url_for , send_file , session
+from flask import Flask, render_template, request, redirect, flash, jsonify, send_from_directory, url_for , send_file , session , Response , stream_with_context
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_required, login_user, logout_user , current_user
 import string
@@ -10,6 +10,13 @@ import mimetypes
 import platform
 import psutil
 import socket
+import uuid  # Import the uuid module
+import shutil
+import time
+import queue
+from datetime import datetime
+import threading
+import json
 
 
 
@@ -24,6 +31,33 @@ DEFAULT_DIRECTORY = os.path.abspath("/")
 # Initialize Flask-Login
 login_manager = LoginManager()
 login_manager.init_app(app)
+
+
+deployment_logs = {}
+
+class DeploymentLogger:
+    def __init__(self, project_id):
+        self.project_id = project_id
+        self.logs = queue.Queue()
+        self.complete = False
+    
+    def add_log(self, message, level="INFO"):
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        log_entry = {
+            "timestamp": timestamp,
+            "message": message,
+            "level": level
+        }
+        self.logs.put(log_entry)
+    
+    def mark_complete(self):
+        self.complete = True
+
+
+def generate_random_folder_name(length=8):
+    """Generate a random folder name."""
+    return ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(length))
+
 
 
 class User(UserMixin, db.Model):
@@ -45,10 +79,11 @@ class Project(db.Model):
     is_deployed         = db.Column(db.Boolean, default=False)
     github_token        = db.Column(db.String(255))  # Column for storing GitHub token
     git_repo            = db.Column(db.String(255))  # Column for storing GitHub token
-    depoloy_triger      = db.Column(db.String(255))  # Column for storing GitHub token
+    deploy_triger      = db.Column(db.String(255))  # Column for storing GitHub token
     branch              = db.Column(db.String(255))  # Column for storing GitHub token
     domain_name         = db.Column(db.String(255))
     port                = db.Column(db.String(255))
+    hook_id            = db.Column(db.String(36), default=lambda: str(uuid.uuid4()), unique=True)  # Auto-generated UUID
 
 
 
@@ -162,38 +197,87 @@ def project():
 @login_required
 def register():
     if request.method == 'POST':
-        project_id = request.form.get('id')
-        name = request.form['name']
-        directory = request.form['directory']
-        deploy_commands = request.form['deploy_commands']
-        github_token = request.form.get('github_token')
+        directory = generate_random_folder_name()  # Generate a random folder name for the directory
+        name                = request.form['name']
+        deploy_commands     = request.form['deploy_commands']
+        github_token        = request.form['github_token']
+        branch              = request.form['branch']
+        port                = request.form['port']
+        domain_name         = request.form['domain_name']
+        deploy_triger       = request.form['deploy_triger']
+        git_repo            = request.form['git_repo']
 
-        if project_id:
-            # Update existing project
-            project = Project.query.get(project_id)
-            if project:
-                project.name = name
-                project.directory = directory
-                project.deploy_commands = deploy_commands
-                project.github_token = github_token
-        else:
-            # Create a new project
-            project = Project(name=name, directory=directory, deploy_commands=deploy_commands, github_token=github_token)
-            db.session.add(project)
+        project = Project(name=name, directory=directory,
+                            deploy_commands=deploy_commands,
+                            github_token=github_token,
+                            port=port,
+                            git_repo=git_repo,
+                            branch=branch,
+                            domain_name=domain_name,
+                            deploy_triger=deploy_triger)
+        db.session.add(project)
 
         db.session.commit()
 
-        return redirect('/')
+        return redirect(url_for('project'))
 
     # Handle GET request for rendering the registration/editing form
-    project_id = request.args.get('id')
-    project = None
-    if project_id:
-        project = Project.query.get(project_id)
 
-    return render_template('register.html', project=project)
+    return render_template('register.html')
 
 
+
+
+
+# @app.route('/deploy/<int:project_id>', methods=['GET', 'POST'])
+# @login_required
+# def deploy(project_id):
+#     project = Project.query.get(project_id)
+#     if project:
+#         if request.method == 'POST':
+#             # Define the base directory for projects
+#             base_directory = os.path.join(os.getcwd(), 'projects')
+#             project.directory = os.path.join(base_directory, project.directory)  # Set the full path for the project directory
+
+#             # Check if the project directory exists, if not, create it
+#             if not os.path.exists(project.directory):
+#                 os.makedirs(project.directory)  # Create the directory if it doesn't exist
+
+#             os.chdir(project.directory)
+
+#             # Remove all folders inside the project directory
+#             for item in os.listdir(project.directory):
+#                 item_path = os.path.join(project.directory, item)
+#                 if os.path.isdir(item_path):
+#                     shutil.rmtree(item_path)  # Delete the folder
+
+#             # Construct the clone URL correctly
+#             clone_url = f"https://{project.github_token}@github.com/{project.git_repo}"
+#             print()
+
+#             # Debug print statement to check the clone URL
+#             print(f"Cloning repository from: {clone_url}")
+
+#             result = subprocess.run(['git', 'clone', clone_url, '.'], cwd=project.directory, capture_output=True, text=True)
+
+#             # Check if the clone was successful
+#             if result.returncode != 0:
+#                 flash(f"Error cloning repository: {result.stderr}", 'danger')
+#                 return redirect(url_for('project'))  # Redirect to the project page or handle as needed
+
+#             # Check for the existence of the Dockerfile
+#             dockerfile_path = os.path.join(project.directory, 'Dockerfile')
+#             if not os.path.isfile(dockerfile_path):
+#                 flash(f"Dockerfile not found in the project directory: {project.directory}", 'warning')
+#                 return redirect(url_for('project'))  # Redirect to the project page or handle as needed
+
+#             # Run the deploy commands
+#             subprocess.run(project.deploy_commands.split(','), shell=True, cwd=project.directory)
+
+#             project.updated = False
+#             db.session.commit()
+
+#     return render_template('deploy.html', project=project)
 
 
 
@@ -201,34 +285,144 @@ def register():
 @login_required
 def deploy(project_id):
     project = Project.query.get(project_id)
-    if project:
-        if request.method == 'POST':
-            if request.form.get('confirm') == 'yes':
-                os.chdir(project.directory)
+    if project and request.method == 'POST':
+        print("Go!!!")
+        # Create a new logger for this deployment
+        logger = DeploymentLogger(project_id)
+        deployment_logs[project_id] = logger
 
-                # Get the existing remote URL
-                original_remote_url = subprocess.check_output(['git', 'remote', 'get-url', 'origin']).strip().decode('utf-8')
+        def deployment_task():
+            with app.app_context():  # Add application context here
+                try:
+                    # Log the start of deployment
+                    logger.add_log(f"Starting deployment for {project.name}")
+                    print('starting...')
 
-                # Modify the remote URL to include the GitHub token
-                if project.github_token:
-                    modified_remote_url = original_remote_url.replace('https://', f'https://{project.github_token}@')
+                    # Base directory setup
+                    base_directory = os.path.join(os.getcwd(), 'projects')
+                    project.directory = os.path.join(base_directory, project.directory)
+                    logger.add_log(f"Project directory: {project.directory}")
 
-                    # Set the modified remote URL
-                    subprocess.run(['git', 'remote', 'set-url', 'origin', modified_remote_url], shell=True)
+                    # Cleanup: Remove all contents inside the project directory if it exists
+                    if os.path.exists(project.directory):
+                        print('here 1')
+                        logger.add_log("Cleaning existing contents in the project directory...")
+                        for item in os.listdir(project.directory):
+                            item_path = os.path.join(project.directory, item)
+                            if os.path.isdir(item_path):
+                                shutil.rmtree(item_path)  # Delete the folder
+                                logger.add_log(f"Removed directory: {item}")
+                            else:
+                                os.remove(item_path)  # Delete the file
+                                logger.add_log(f"Removed file: {item}")
 
-                # Perform the git pull command
-                subprocess.run(['git', 'pull'], shell=True)
+                    # Ensure the project directory exists
+                    os.makedirs(project.directory, exist_ok=True)
+                    logger.add_log("Ensured project directory exists")
+                    print('here 2')
 
-                # Reset the remote URL back to the original if it was changed
-                if project.github_token:
-                    subprocess.run(['git', 'remote', 'set-url', 'origin', original_remote_url], shell=True)
+                    os.chdir(project.directory)
+                    # Clone repository
+                    clone_url = f"https://{project.github_token}@github.com/{project.git_repo}"
+                    logger.add_log("Cloning repository...")
+                    result = subprocess.run(
+                        ['git', 'clone', clone_url, '.'],
+                        cwd=project.directory,
+                        capture_output=True,
+                        text=True
+                    )
 
-                subprocess.run(project.deploy_commands.split(','), shell=True)
+                    if result.returncode != 0:
+                        logger.add_log(f"Error cloning repository: {result.stderr}", "ERROR")
+                        raise Exception("Clone failed")
 
-                project.updated = False
-                db.session.commit()
+                    logger.add_log("Repository cloned successfully")
+
+                    # Check for Dockerfile
+                    dockerfile_path = os.path.join(project.directory, 'Dockerfile')
+                    if not os.path.isfile(dockerfile_path):
+                        logger.add_log("Dockerfile not found", "ERROR")
+                        # raise Exception("Dockerfile not found")
+
+                    # Run deployment commands
+                    for command in project.deploy_commands.split(','):
+                        logger.add_log(f"Executing: {command}")
+                        result = subprocess.run(
+                            command.strip(),
+                            shell=True,
+                            cwd=project.directory,
+                            capture_output=True,
+                            text=True
+                        )
+                        if result.stdout:
+                            logger.add_log(result.stdout)
+                        if result.stderr:
+                            logger.add_log(result.stderr, "WARNING")
+
+                    project.updated = False
+                    db.session.commit()
+                    
+                    logger.add_log("Deployment completed successfully")
+                    
+                except Exception as e:
+                    logger.add_log(f"Deployment failed: {str(e)}", "ERROR")
+                finally:
+                    logger.mark_complete()
+
+        # Start deployment in a background thread
+        thread = threading.Thread(target=deployment_task)
+        thread.start()
+        
+        return redirect(url_for('project_log', project_id=project_id))
 
     return render_template('deploy.html', project=project)
+
+
+
+
+@app.route('/project_log/<int:project_id>')
+def project_log(project_id):
+    project = Project.query.get(project_id)
+    return render_template('project_log.html',
+                           project_id=project_id,project=project)
+
+
+
+@app.route('/logs/<int:project_id>/stream')
+@login_required
+def stream_logs(project_id):
+    def generate():
+        logger = deployment_logs.get(project_id)
+        if not logger:
+            return
+            
+        while not logger.complete or not logger.logs.empty():
+            try:
+                log_entry = logger.logs.get(timeout=1)
+                yield f"data: {json.dumps(log_entry)}\n\n"
+            except queue.Empty:
+                if logger.complete:
+                    break
+                continue
+
+    return Response(
+        stream_with_context(generate()),
+        mimetype='text/event-stream'
+    )
+
+
+
+@app.route('/api/logs/<int:project_id>')
+@login_required
+def get_logs(project_id):
+    logger = deployment_logs.get(project_id)
+    if not logger:
+        return jsonify({'logs': []})
+    
+    logs = []
+    while not logger.logs.empty():
+        logs.append(logger.logs.get())
+    return jsonify({'logs': logs})
 
 
 @app.route('/rebuild/<int:project_id>', methods=['GET'])
@@ -375,6 +569,9 @@ def logout():
 def delete_project(project_id):
     project = Project.query.get(project_id)
     if project:
+        # Delete the project directory
+        if os.path.exists(project.directory):
+            shutil.rmtree(project.directory)  # Remove the directory and its contents
         db.session.delete(project)
         db.session.commit()
     return redirect('/')
@@ -393,6 +590,11 @@ def edit_project(project_id):
         project.directory = request.form['directory']
         project.deploy_commands = request.form['deploy_commands']
         project.github_token = request.form.get('github_token')
+        project.branch = request.form.get('branch')
+        project.domain_name = request.form.get('domain_name')
+        project.port = request.form.get('port')
+        project.git_repo = request.form.get('git_repo')
+        project.deploy_triger = request.form.get('deploy_triger')
         db.session.commit()
         flash('Project updated successfully!', 'success')
         return redirect('/')
@@ -404,7 +606,7 @@ def edit_project(project_id):
 def get_full_path(relative_path):
     """
     Combines the system root with a relative path.
-    
+
     :param relative_path: The relative path to append to the system root (e.g., 'home').
     :return: The combined full path.
     """
@@ -421,7 +623,7 @@ def get_items_with_name_and_path(full_path):
     """
     if not os.path.isdir(full_path):
         raise ValueError(f"{full_path} is not a valid directory.")
-    
+
     items = os.listdir(full_path)
     return [{"name": item, "path": os.path.abspath(os.path.join(full_path, item))} for item in items]
 
@@ -432,12 +634,12 @@ def get_items_with_name_and_path(full_path):
 @login_required
 def file_viewer():
     file_path = request.args.get('file', None)
-    
+
     if not file_path or not os.path.isfile(file_path):
         print('from here ')
         flash(f'Invalid or missing file path: {file_path}', 'danger')
         return redirect(url_for('file_management'))
-    
+
     # Detect the file type
     mime_type, _ = mimetypes.guess_type(file_path)
 
@@ -501,7 +703,6 @@ def file_management():
     if os.path.isfile(full_path):
         print('here 1')
         return redirect(url_for('file_viewer', file=full_path))
-    
     # Validate the directory
     if not os.path.exists(full_path) or not os.path.isdir(full_path):
         print('here 2')
@@ -646,22 +847,19 @@ def create_user():
     if not current_user.is_admin:
         flash('Permission denied', 'danger')
         return redirect(url_for('settings'))
-        
     username = request.form.get('new_username')
     email = request.form.get('new_email')
     password = request.form.get('new_user_password')
-    
     if User.query.filter_by(username=username).first():
         flash('Username already exists', 'danger')
         return redirect(url_for('settings'))
-        
     user = User(username=username, email=email)
     user.set_password(password)
     db.session.add(user)
     db.session.commit()
-    
     flash('User created successfully!', 'success')
     return redirect(url_for('settings'))
+
 
 @app.route('/delete_user/<int:user_id>', methods=['POST'])
 @login_required
@@ -674,15 +872,112 @@ def delete_user(user_id):
     if user.id == current_user.id:
         flash('Cannot delete your own account', 'danger')
         return redirect(url_for('settings'))
-        
+
     db.session.delete(user)
     db.session.commit()
-    
+
     flash('User deleted successfully!', 'success')
     return redirect(url_for('settings'))
+
+
+@app.route('/webhook/<string:hook_id>', methods=['POST'])
+def github_webhook(hook_id):
+    # Find the project associated with the hook_id from the URL
+    project = Project.query.filter_by(hook_id=hook_id).first()
+    data = request.json
+    print(data)
+
+    if not project:
+        return jsonify({'error': 'Project not found'}), 404
+
+    # Check if the trigger condition is met
+    if project.deploy_triger == 'push':  # Adjust this condition based on your requirements
+        # Create a new logger for this deployment
+        logger = DeploymentLogger(project.id)
+        deployment_logs[project.id] = logger
+
+        def deployment_task():
+            with app.app_context():  # Add application context here
+                try:
+                    # Log the start of deployment
+                    logger.add_log(f"Starting deployment for {project.name}")
+
+                    # Base directory setup
+                    base_directory = os.path.join(os.getcwd(), 'projects')
+                    project.directory = os.path.join(base_directory, project.directory)
+                    logger.add_log(f"Project directory: {project.directory}")
+
+                    # Cleanup: Remove all contents inside the project directory if it exists
+                    if os.path.exists(project.directory):
+                        logger.add_log("Cleaning existing contents in the project directory...")
+                        for item in os.listdir(project.directory):
+                            item_path = os.path.join(project.directory, item)
+                            if os.path.isdir(item_path):
+                                shutil.rmtree(item_path)  # Delete the folder
+                                logger.add_log(f"Removed directory: {item}")
+                            else:
+                                os.remove(item_path)  # Delete the file
+                                logger.add_log(f"Removed file: {item}")
+
+                    # Ensure the project directory exists
+                    os.makedirs(project.directory, exist_ok=True)
+                    logger.add_log("Ensured project directory exists")
+
+                    # Clone repository
+                    clone_url = f"https://{project.github_token}@github.com/{project.git_repo}"
+                    logger.add_log("Cloning repository...")
+                    result = subprocess.run(
+                        ['git', 'clone', clone_url, '.'],
+                        cwd=project.directory,
+                        capture_output=True,
+                        text=True
+                    )
+
+                    if result.returncode != 0:
+                        logger.add_log(f"Error cloning repository: {result.stderr}", "ERROR")
+                        raise Exception("Clone failed")
+
+                    logger.add_log("Repository cloned successfully")
+
+                    # Check for Dockerfile
+                    dockerfile_path = os.path.join(project.directory, 'Dockerfile')
+                    if not os.path.isfile(dockerfile_path):
+                        logger.add_log("Dockerfile not found", "ERROR")
+
+                    # Run deployment commands
+                    for command in project.deploy_commands.split(','):
+                        logger.add_log(f"Executing: {command}")
+                        result = subprocess.run(
+                            command.strip(),
+                            shell=True,
+                            cwd=project.directory,
+                            capture_output=True,
+                            text=True
+                        )
+                        if result.stdout:
+                            logger.add_log(result.stdout)
+                        if result.stderr:
+                            logger.add_log(result.stderr, "WARNING")
+
+                    project.updated = False
+                    db.session.commit()
+                    logger.add_log("Deployment completed successfully")
+                except Exception as e:
+                    logger.add_log(f"Deployment failed: {str(e)}", "ERROR")
+                finally:
+                    logger.mark_complete()
+
+        # Start deployment in a background thread
+        thread = threading.Thread(target=deployment_task)
+        thread.start()
+        return jsonify({'message': 'Deployment started'}), 202
+
+    return jsonify({'message': 'No action taken'}), 200
+
 
 
 
 
 if __name__ == '__main__':
-    app.run(debug=True,port=5001)
+    app.run(debug=False,port=5001)
+

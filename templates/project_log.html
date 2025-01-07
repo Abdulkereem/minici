@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block title %}Deployment Logs - {{ project.name }}{% endblock %}
+
+{% block content %}
+<div class="p-6 w-full">
+    <!-- Header -->
+    <div class="mb-6 flex justify-between items-center">
+        <div>
+            <h1 class="text-2xl font-bold text-white">Deployment Logs</h1>
+            <p class="text-gray-400 mt-1">Project: {{ project.name }}</p>
+        </div>
+        <a href="{{ url_for('project') }}" class="px-4 py-2 bg-gray-800 text-gray-300 hover:bg-gray-700 rounded-md">
+            Back to Projects
+        </a>
+    </div>
+
+    <!-- Log Container -->
+    <div class="bg-[#1a1a1a] rounded-lg border border-gray-800">
+        <div class="border-b border-gray-800 p-4 flex justify-between items-center">
+            <div class="flex items-center gap-4">
+                <div class="flex items-center gap-2">
+                    <input type="checkbox" id="autoScroll" checked 
+                           class="form-checkbox h-4 w-4 bg-gray-700 border-gray-600 rounded text-green-500">
+                    <label for="autoScroll" class="text-gray-400">Auto-scroll</label>
+                </div>
+            </div>
+            <div id="status" class="flex items-center gap-2">
+                <span class="text-green-500">●</span>
+                <span class="text-gray-400">Connected</span>
+            </div>
+        </div>
+
+        <!-- Logs -->
+        <div id="logs" class="h-[600px] overflow-y-auto font-mono text-sm p-4">
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const logsContainer = document.getElementById('logs');
+    const autoScroll = document.getElementById('autoScroll');
+    const status = document.getElementById('status');
+    
+    // Connect to SSE stream
+    const eventSource = new EventSource("{{ url_for('stream_logs', project_id=project.id) }}");
+    
+    eventSource.onmessage = function(event) {
+        const log = JSON.parse(event.data);
+        
+        // Create log entry
+        const logEntry = document.createElement('div');
+        logEntry.className = 'mb-1';
+        
+        // Style based on log level
+        let levelClass = 'text-gray-400';
+        if (log.level === 'ERROR') levelClass = 'text-red-400';
+        if (log.level === 'WARNING') levelClass = 'text-yellow-400';
+        
+        logEntry.innerHTML = `
+            <span class="text-gray-500">[${log.timestamp}]</span>
+            <span class="${levelClass}">${log.message}</span>
+        `;
+        
+        logsContainer.appendChild(logEntry);
+        
+        // Auto-scroll if enabled
+        if (autoScroll.checked) {
+            logsContainer.scrollTop = logsContainer.scrollHeight;
+        }
+    };
+    
+    eventSource.onerror = function() {
+        status.innerHTML = '<span class="text-red-500">●</span><span class="text-gray-400">Disconnected</span>';
+        eventSource.close();
+    };
+});
+</script>
+{% endblock %}

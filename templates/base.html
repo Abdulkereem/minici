@@ -102,6 +102,52 @@
             border-color: var(--accent-color);
             color: var(--accent-color);
         }
+
+        /* Flash message styles */
+        .flash-message {
+            margin: 1rem;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            animation: slideDown 0.3s ease-out;
+        }
+
+        .flash-success {
+            background-color: rgba(76, 175, 80, 0.1);
+            border: 1px solid var(--accent-color);
+            color: var(--accent-color);
+        }
+
+        .flash-error {
+            background-color: rgba(239, 68, 68, 0.1);
+            border: 1px solid #ef4444;
+            color: #ef4444;
+        }
+
+        .flash-warning {
+            background-color: rgba(245, 158, 11, 0.1);
+            border: 1px solid #f59e0b;
+            color: #f59e0b;
+        }
+
+        .flash-info {
+            background-color: rgba(59, 130, 246, 0.1);
+            border: 1px solid #3b82f6;
+            color: #3b82f6;
+        }
+
+        @keyframes slideDown {
+            from {
+                transform: translateY(-100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
     </style>
 </head>
 <body>
@@ -172,6 +218,23 @@
 
         <!-- Main Content -->
         <div class="flex-1 content-wrapper">
+            <!-- Flash Messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="flash-message flash-{{ category }} relative" role="alert">
+                            <div class="flex items-center">
+                                <i class="fas fa-{% if category == 'success' %}check-circle{% elif category == 'error' %}exclamation-circle{% elif category == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %} mr-3"></i>
+                                <span>{{ message }}</span>
+                            </div>
+                            <button onclick="this.parentElement.remove()" class="ml-4 text-sm opacity-70 hover:opacity-100 focus:outline-none">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
             {% block content %}{% endblock %}
         </div>
     </div>

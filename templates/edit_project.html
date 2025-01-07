@@ -188,6 +188,86 @@
                 <p class="help-text">Personal access token with repo and workflow permissions</p>
             </div>
 
+            <div class="form-group">
+                <label class="form-label" for="branch">
+                    <i class="fas fa-code-branch mr-2"></i>
+                    Branch
+                </label>
+                <input 
+                    class="form-input" 
+                    type="text" 
+                    name="branch" 
+                    id="branch" 
+                    required 
+                    value="{{ project.branch }}"
+                >
+                <p class="help-text">Specify the branch to deploy from</p>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="domain_name">
+                    <i class="fas fa-globe mr-2"></i>
+                    Domain Name
+                </label>
+                <input 
+                    class="form-input" 
+                    type="text" 
+                    name="domain_name" 
+                    id="domain_name" 
+                    required 
+                    value="{{ project.domain_name }}"
+                >
+                <p class="help-text">Enter the domain name for the project</p>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="port">
+                    <i class="fas fa-plug mr-2"></i>
+                    Port
+                </label>
+                <input 
+                    class="form-input" 
+                    type="number" 
+                    name="port" 
+                    id="port" 
+                    required 
+                    value="{{ project.port }}"
+                >
+                <p class="help-text">Specify the port number for the project</p>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="git_repo">
+                    <i class="fab fa-git-square mr-2"></i>
+                    Git Repository
+                </label>
+                <input 
+                    class="form-input" 
+                    type="text" 
+                    name="git_repo" 
+                    id="git_repo" 
+                    required 
+                    value="{{ project.git_repo }}"
+                >
+                <p class="help-text">Enter the URL of the Git repository</p>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="depoloy_triger">
+                    <i class="fas fa-bolt mr-2"></i>
+                    Deploy Trigger
+                </label>
+                <input 
+                    class="form-input" 
+                    type="text" 
+                    name="depoloy_triger" 
+                    id="depoloy_triger" 
+                    required 
+                    value="{{ project.depoloy_triger }}"
+                >
+                <p class="help-text">Specify the trigger for deployment</p>
+            </div>
+
             <div class="flex items-center justify-between pt-6">
                 <button class="form-button" type="submit">
                     <i class="fas fa-save"></i>
