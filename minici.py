@@ -880,7 +880,6 @@ def delete_user(user_id):
     return redirect(url_for('settings'))
 
 
-
 @app.route('/webhook/<string:hook_id>', methods=['POST'])
 def github_webhook(hook_id):
     # Find the project associated with the hook_id from the URL
@@ -892,7 +891,7 @@ def github_webhook(hook_id):
         return jsonify({'error': 'Project not found'}), 404
 
     # Check if the trigger condition is met
-    if project.deploy_triger == 'push':  # Adjust this condition based on your requirements
+    if project.deploy_triger == 'push' and 'commits' in data:  # Adjust this condition based on your requirements
         # Create a new logger for this deployment
         logger = DeploymentLogger(project.id)
         deployment_logs[project.id] = logger
@@ -967,12 +966,10 @@ def github_webhook(hook_id):
                     logger.add_log(f"Deployment failed: {str(e)}", "ERROR")
                 finally:
                     logger.mark_complete()
-
         # Start deployment in a background thread
         thread = threading.Thread(target=deployment_task)
         thread.start()
         return jsonify({'message': 'Deployment started'}), 202
-
     return jsonify({'message': 'No action taken'}), 200
 
 
