@@ -915,6 +915,7 @@ def delete_user(user_id):
 
 @app.route('/webhook/<string:hook_id>', methods=['POST'])
 def github_webhook(hook_id):
+    print(hook_id)
     project = Project.query.filter_by(hook_id=hook_id).first()
     if not project:
         return jsonify({'error': 'Project not found'}), 404
