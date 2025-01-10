@@ -915,49 +915,47 @@ def delete_user(user_id):
 
 @app.route('/webhook/<string:hook_id>', methods=['POST'])
 def github_webhook(hook_id):
-    # Find the project associated with the hook_id from the URL
     project = Project.query.filter_by(hook_id=hook_id).first()
-    data = request.json
-    print(data)
-
     if not project:
         return jsonify({'error': 'Project not found'}), 404
 
-    # Check if the trigger condition is met
+    data = request.json
+    if data is None:
+        return jsonify({'error': 'Invalid JSON payload'}), 400
+
     branch = data.get('ref', '').split('/')[-1]
-    if project.deploy_triger == 'push' and 'commits' in data and branch==project.branch:  # Adjust this condition based on your requirements
-        # Create a new logger for this deployment
+    if not branch:
+        return jsonify({'error': 'Branch not specified'}), 400
+
+    if project.deploy_triger == 'push' and 'commits' in data and branch == project.branch:
         logger = DeploymentLogger(project.id)
         deployment_logs[project.id] = logger
 
         def deployment_task():
-            with app.app_context():  # Add application context here
+            with app.app_context():
                 try:
-                    # Log the start of deployment
                     logger.add_log(f"Starting deployment for {project.name}")
-
-                    # Base directory setup
                     base_directory = os.path.join(os.getcwd(), 'projects')
                     project.directory = os.path.join(base_directory, project.directory)
                     logger.add_log(f"Project directory: {project.directory}")
 
-                    # Cleanup: Remove all contents inside the project directory if it exists
-                    if os.path.exists(project.directory):
-                        logger.add_log("Cleaning existing contents in the project directory...")
-                        for item in os.listdir(project.directory):
-                            item_path = os.path.join(project.directory, item)
-                            if os.path.isdir(item_path):
-                                shutil.rmtree(item_path)  # Delete the folder
-                                logger.add_log(f"Removed directory: {item}")
-                            else:
-                                os.remove(item_path)  # Delete the file
-                                logger.add_log(f"Removed file: {item}")
+                    try:
+                        if os.path.exists(project.directory):
+                            logger.add_log("Cleaning existing contents in the project directory...")
+                            for item in os.listdir(project.directory):
+                                item_path = os.path.join(project.directory, item)
+                                if os.path.isdir(item_path):
+                                    shutil.rmtree(item_path)
+                                    logger.add_log(f"Removed directory: {item}")
+                                else:
+                                    os.remove(item_path)
+                                    logger.add_log(f"Removed file: {item}")
+                    except Exception as e:
+                        logger.add_log(f"Error cleaning project directory: {str(e)}", "ERROR")
 
-                    # Ensure the project directory exists
                     os.makedirs(project.directory, exist_ok=True)
                     logger.add_log("Ensured project directory exists")
 
-                    # Clone repository
                     clone_url = f"https://{project.github_token}@github.com/{project.git_repo}"
                     logger.add_log("Cloning repository...")
                     result = subprocess.run(
@@ -973,12 +971,10 @@ def github_webhook(hook_id):
 
                     logger.add_log("Repository cloned successfully")
 
-                    # Check for Dockerfile
                     dockerfile_path = os.path.join(project.directory, 'Dockerfile')
                     if not os.path.isfile(dockerfile_path):
-                        logger.add_log("Dockerfile not found", "ERROR")
+                        logger.add_log("Dockerfile not found", "WARNING")
 
-                    # Run deployment commands
                     for command in project.deploy_commands.split(','):
                         logger.add_log(f"Executing: {command}")
                         result = subprocess.run(
@@ -1001,10 +997,11 @@ def github_webhook(hook_id):
                     logger.add_log(f"Deployment failed: {str(e)}", "ERROR")
                 finally:
                     logger.mark_complete()
-        # Start deployment in a background thread
+
         thread = threading.Thread(target=deployment_task)
         thread.start()
         return jsonify({'message': 'Deployment started'}), 202
+
     return jsonify({'message': 'No action taken'}), 200
 
 
