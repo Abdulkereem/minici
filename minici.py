@@ -928,7 +928,7 @@ def github_webhook(hook_id):
     if not branch:
         return jsonify({'error': 'Branch not specified'}), 400
 
-    if project.deploy_triger == 'push'  and branch == project.branch:
+    if branch == project.branch:
         logger = DeploymentLogger(project.id)
         deployment_logs[project.id] = logger
 
