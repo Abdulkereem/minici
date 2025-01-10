@@ -924,10 +924,11 @@ def github_webhook(hook_id):
         return jsonify({'error': 'Invalid JSON payload'}), 400
 
     branch = data.get('ref', '').split('/')[-1]
+    print(branch)
     if not branch:
         return jsonify({'error': 'Branch not specified'}), 400
 
-    if project.deploy_triger == 'push' and 'commits' in data and branch == project.branch:
+    if project.deploy_triger == 'push'  and branch == project.branch:
         logger = DeploymentLogger(project.id)
         deployment_logs[project.id] = logger
 
