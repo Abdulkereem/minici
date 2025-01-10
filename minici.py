@@ -915,7 +915,6 @@ def delete_user(user_id):
 
 @app.route('/webhook/<string:hook_id>', methods=['POST'])
 def github_webhook(hook_id):
-    print(hook_id)
     project = Project.query.filter_by(hook_id=hook_id).first()
     if not project:
         return jsonify({'error': 'Project not found'}), 404
@@ -928,13 +927,15 @@ def github_webhook(hook_id):
     # Check for action and conclusion in the payload
     action = data.get('action')
     conclusion = data.get('workflow_run', {}).get('conclusion')
+    event_type = data.get('event', '')  # Get the event type from the payload
 
-    if action == "completed" and conclusion == "success":
+    # Check if the event type matches the project's deploy trigger
+    if project.deploy_triger == event_type and action == "completed" and conclusion == "success":
         branch = data.get('workflow_run', {}).get('head_branch')
         if not branch:
             return jsonify({'error': 'Branch not specified'}), 400
 
-        if project.deploy_triger == 'push' and branch == project.branch:
+        if branch == project.branch:
             logger = DeploymentLogger(project.id)
             deployment_logs[project.id] = logger
 
