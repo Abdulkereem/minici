@@ -920,8 +920,9 @@ def github_webhook(hook_id):
     #     return jsonify({'error': 'Project not found'}), 404
 
     data = request.json
-    if data is None:
-        return jsonify({'error': 'Invalid JSON payload'}), 400
+    print(data)
+    # if data is None:
+    #     return jsonify({'error': 'Invalid JSON payload'}), 400
 
     branch = data.get('ref', '').split('/')[-1]
     if not branch:
