@@ -920,24 +920,14 @@ def github_webhook(hook_id):
         return jsonify({'error': 'Project not found'}), 404
 
     data = request.json
-    print(data)
     if data is None:
         return jsonify({'error': 'Invalid JSON payload'}), 400
 
-    # Determine the event type and branch
-    event_type = data.get('action')  # Get the action as the event type
-    branch = None
+    branch = data.get('ref', '').split('/')[-1]
+    if not branch:
+        return jsonify({'error': 'Branch not specified'}), 400
 
-    # Check if the event is a check_run
-    if 'check_run' in data:
-        branch = data['check_run'].get('check_suite', {}).get('head_branch')
-
-    # Check if the event is a workflow_run
-    elif 'workflow_run' in data:
-        branch = data['workflow_run'].get('head_branch')
-
-    # Proceed with deployment if the event type and branch match
-    if branch and project.deploy_triger == event_type and branch == project.branch:
+    if project.deploy_triger == 'push' and 'commits' in data and branch == project.branch:
         logger = DeploymentLogger(project.id)
         deployment_logs[project.id] = logger
 
@@ -949,17 +939,19 @@ def github_webhook(hook_id):
                     project.directory = os.path.join(base_directory, project.directory)
                     logger.add_log(f"Project directory: {project.directory}")
 
-                    # Clean existing contents in the project directory
-                    if os.path.exists(project.directory):
-                        logger.add_log("Cleaning existing contents in the project directory...")
-                        for item in os.listdir(project.directory):
-                            item_path = os.path.join(project.directory, item)
-                            if os.path.isdir(item_path):
-                                shutil.rmtree(item_path)
-                                logger.add_log(f"Removed directory: {item}")
-                            else:
-                                os.remove(item_path)
-                                logger.add_log(f"Removed file: {item}")
+                    try:
+                        if os.path.exists(project.directory):
+                            logger.add_log("Cleaning existing contents in the project directory...")
+                            for item in os.listdir(project.directory):
+                                item_path = os.path.join(project.directory, item)
+                                if os.path.isdir(item_path):
+                                    shutil.rmtree(item_path)
+                                    logger.add_log(f"Removed directory: {item}")
+                                else:
+                                    os.remove(item_path)
+                                    logger.add_log(f"Removed file: {item}")
+                    except Exception as e:
+                        logger.add_log(f"Error cleaning project directory: {str(e)}", "ERROR")
 
                     os.makedirs(project.directory, exist_ok=True)
                     logger.add_log("Ensured project directory exists")
@@ -978,6 +970,10 @@ def github_webhook(hook_id):
                         raise Exception("Clone failed")
 
                     logger.add_log("Repository cloned successfully")
+
+                    dockerfile_path = os.path.join(project.directory, 'Dockerfile')
+                    if not os.path.isfile(dockerfile_path):
+                        logger.add_log("Dockerfile not found", "WARNING")
 
                     for command in project.deploy_commands.split(','):
                         logger.add_log(f"Executing: {command}")
