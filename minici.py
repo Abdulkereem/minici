@@ -293,83 +293,98 @@ def deploy(project_id):
         deployment_logs[project_id] = logger
 
         def deployment_task():
-            with app.app_context():  # Add application context here
-                try:
-                    # Log the start of deployment
-                    logger.add_log(f"Starting deployment for {project.name}")
-                    print('starting...')
+            # Use the project name for the log file
+            log_file_path = os.path.join(project.directory, f'{project.name}_deployment.log')
+            with open(log_file_path, 'a') as log_file:  # Open log file in append mode
+                with app.app_context():  # Add application context here
+                    try:
+                        # Log the start of deployment
+                        logger.add_log(f"Starting deployment for {project.name}")
+                        log_file.write(f"{datetime.now()}: Starting deployment for {project.name}\n")
+                        print('starting...')
 
-                    # Base directory setup
-                    base_directory = os.path.join(os.getcwd(), 'projects')
-                    project.directory = os.path.join(base_directory, project.directory)
-                    logger.add_log(f"Project directory: {project.directory}")
+                        # Base directory setup
+                        base_directory = os.path.join(os.getcwd(), 'projects')
+                        project.directory = os.path.join(base_directory, project.directory)
+                        logger.add_log(f"Project directory: {project.directory}")
+                        log_file.write(f"{datetime.now()}: Project directory: {project.directory}\n")
 
-                    # Cleanup: Remove all contents inside the project directory if it exists
-                    if os.path.exists(project.directory):
-                        print('here 1')
-                        logger.add_log("Cleaning existing contents in the project directory...")
-                        for item in os.listdir(project.directory):
-                            item_path = os.path.join(project.directory, item)
-                            if os.path.isdir(item_path):
-                                shutil.rmtree(item_path)  # Delete the folder
-                                logger.add_log(f"Removed directory: {item}")
-                            else:
-                                os.remove(item_path)  # Delete the file
-                                logger.add_log(f"Removed file: {item}")
+                        # Cleanup: Remove all contents inside the project directory if it exists
+                        if os.path.exists(project.directory):
+                            logger.add_log("Cleaning existing contents in the project directory...")
+                            log_file.write(f"{datetime.now()}: Cleaning existing contents in the project directory...\n")
+                            for item in os.listdir(project.directory):
+                                item_path = os.path.join(project.directory, item)
+                                if os.path.isdir(item_path):
+                                    shutil.rmtree(item_path)  # Delete the folder
+                                    logger.add_log(f"Removed directory: {item}")
+                                    log_file.write(f"{datetime.now()}: Removed directory: {item}\n")
+                                else:
+                                    os.remove(item_path)  # Delete the file
+                                    logger.add_log(f"Removed file: {item}")
+                                    log_file.write(f"{datetime.now()}: Removed file: {item}\n")
 
-                    # Ensure the project directory exists
-                    os.makedirs(project.directory, exist_ok=True)
-                    logger.add_log("Ensured project directory exists")
-                    print('here 2')
+                        # Ensure the project directory exists
+                        os.makedirs(project.directory, exist_ok=True)
+                        logger.add_log("Ensured project directory exists")
+                        log_file.write(f"{datetime.now()}: Ensured project directory exists\n")
 
-                    os.chdir(project.directory)
-                    # Clone repository
-                    clone_url = f"https://{project.github_token}@github.com/{project.git_repo}"
-                    logger.add_log("Cloning repository...")
-                    result = subprocess.run(
-                        ['git', 'clone', clone_url, '.'],
-                        cwd=project.directory,
-                        capture_output=True,
-                        text=True
-                    )
-
-                    if result.returncode != 0:
-                        logger.add_log(f"Error cloning repository: {result.stderr}", "ERROR")
-                        raise Exception("Clone failed")
-
-                    logger.add_log("Repository cloned successfully")
-
-                    # Check for Dockerfile
-                    dockerfile_path = os.path.join(project.directory, 'Dockerfile')
-                    if not os.path.isfile(dockerfile_path):
-                        logger.add_log("Dockerfile not found", "ERROR")
-                        # raise Exception("Dockerfile not found")
-
-                    # Run deployment commands
-                    for command in project.deploy_commands.split(','):
-                        logger.add_log(f"Executing: {command}")
+                        os.chdir(project.directory)
+                        # Clone repository
+                        clone_url = f"https://{project.github_token}@github.com/{project.git_repo}"
+                        logger.add_log("Cloning repository...")
+                        log_file.write(f"{datetime.now()}: Cloning repository...\n")
                         result = subprocess.run(
-                            command.strip(),
-                            shell=True,
+                            ['git', 'clone', '-b', project.branch, clone_url, '.'],
                             cwd=project.directory,
                             capture_output=True,
                             text=True
                         )
-                        if result.stdout:
-                            logger.add_log(result.stdout)
-                        if result.stderr:
-                            logger.add_log(result.stderr, "WARNING")
 
-                    project.updated = False
-                    project.is_deployed = True
-                    db.session.commit()
-                    
-                    logger.add_log("Deployment completed successfully")
-                    
-                except Exception as e:
-                    logger.add_log(f"Deployment failed: {str(e)}", "ERROR")
-                finally:
-                    logger.mark_complete()
+                        if result.returncode != 0:
+                            logger.add_log(f"Error cloning repository: {result.stderr}", "ERROR")
+                            log_file.write(f"{datetime.now()}: Error cloning repository: {result.stderr}\n")
+                            raise Exception("Clone failed")
+
+                        logger.add_log("Repository cloned successfully")
+                        log_file.write(f"{datetime.now()}: Repository cloned successfully\n")
+
+                        # Check for Dockerfile
+                        dockerfile_path = os.path.join(project.directory, 'Dockerfile')
+                        if not os.path.isfile(dockerfile_path):
+                            logger.add_log("Dockerfile not found", "ERROR")
+                            log_file.write(f"{datetime.now()}: Dockerfile not found\n")
+
+                        # Run deployment commands
+                        for command in project.deploy_commands.split(','):
+                            logger.add_log(f"Executing: {command}")
+                            log_file.write(f"{datetime.now()}: Executing: {command}\n")
+                            result = subprocess.run(
+                                command.strip(),
+                                shell=True,
+                                cwd=project.directory,
+                                capture_output=True,
+                                text=True
+                            )
+                            if result.stdout:
+                                logger.add_log(result.stdout)
+                                log_file.write(f"{datetime.now()}: {result.stdout}\n")
+                            if result.stderr:
+                                logger.add_log(result.stderr, "WARNING")
+                                log_file.write(f"{datetime.now()}: {result.stderr}\n")
+
+                        project.updated = False
+                        project.is_deployed = True
+                        db.session.commit()
+                        
+                        logger.add_log("Deployment completed successfully")
+                        log_file.write(f"{datetime.now()}: Deployment completed successfully\n")
+                        
+                    except Exception as e:
+                        logger.add_log(f"Deployment failed: {str(e)}", "ERROR")
+                        log_file.write(f"{datetime.now()}: Deployment failed: {str(e)}\n")
+                    finally:
+                        logger.mark_complete()
 
         # Start deployment in a background thread
         thread = threading.Thread(target=deployment_task)
@@ -930,7 +945,7 @@ def github_webhook(hook_id):
                     clone_url = f"https://{project.github_token}@github.com/{project.git_repo}"
                     logger.add_log("Cloning repository...")
                     result = subprocess.run(
-                        ['git', 'clone', clone_url, '.'],
+                        ['git', 'clone', '-b', project.branch, clone_url, '.'],
                         cwd=project.directory,
                         capture_output=True,
                         text=True
