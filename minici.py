@@ -293,8 +293,24 @@ def deploy(project_id):
         deployment_logs[project_id] = logger
 
         def deployment_task():
+            # Base directory setup
+            base_directory = os.path.join(os.getcwd(), 'projects')
+            project.directory = os.path.join(base_directory, project.directory)
+
+            # Check if the project directory exists
+            if os.path.exists(project.directory):
+                # Remove the existing directory and its contents
+                shutil.rmtree(project.directory)  # Remove the directory and its contents
+
+            # Create the project directory
+            os.makedirs(project.directory, exist_ok=True)  # Create the project directory
+
             # Use the project name for the log file
             log_file_path = os.path.join(project.directory, f'{project.name}_deployment.log')
+            
+            # Ensure the directory for the log file exists
+            os.makedirs(os.path.dirname(log_file_path), exist_ok=True)  # Create the directory if it doesn't exist
+            
             with open(log_file_path, 'a') as log_file:  # Open log file in append mode
                 with app.app_context():  # Add application context here
                     try:
