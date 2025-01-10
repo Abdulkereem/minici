@@ -916,92 +916,97 @@ def delete_user(user_id):
 @app.route('/webhook/<string:hook_id>', methods=['POST'])
 def github_webhook(hook_id):
     project = Project.query.filter_by(hook_id=hook_id).first()
-    # if not project:
-    #     return jsonify({'error': 'Project not found'}), 404
+    if not project:
+        return jsonify({'error': 'Project not found'}), 404
 
     data = request.json
     print(data)
-    # if data is None:
-    #     return jsonify({'error': 'Invalid JSON payload'}), 400
+    if data is None:
+        return jsonify({'error': 'Invalid JSON payload'}), 400
 
-    branch = data.get('ref', '').split('/')[-1]
-    if not branch:
-        return jsonify({'error': 'Branch not specified'}), 400
+    # Check for action and conclusion in the payload
+    action = data.get('action')
+    conclusion = data.get('workflow_run', {}).get('conclusion')
 
-    if project.deploy_triger == 'push' and 'commits' in data and branch == project.branch:
-        logger = DeploymentLogger(project.id)
-        deployment_logs[project.id] = logger
+    if action == "completed" and conclusion == "success":
+        branch = data.get('workflow_run', {}).get('head_branch')
+        if not branch:
+            return jsonify({'error': 'Branch not specified'}), 400
 
-        def deployment_task():
-            with app.app_context():
-                try:
-                    logger.add_log(f"Starting deployment for {project.name}")
-                    base_directory = os.path.join(os.getcwd(), 'projects')
-                    project.directory = os.path.join(base_directory, project.directory)
-                    logger.add_log(f"Project directory: {project.directory}")
+        if project.deploy_triger == 'push' and branch == project.branch:
+            logger = DeploymentLogger(project.id)
+            deployment_logs[project.id] = logger
 
+            def deployment_task():
+                with app.app_context():
                     try:
-                        if os.path.exists(project.directory):
-                            logger.add_log("Cleaning existing contents in the project directory...")
-                            for item in os.listdir(project.directory):
-                                item_path = os.path.join(project.directory, item)
-                                if os.path.isdir(item_path):
-                                    shutil.rmtree(item_path)
-                                    logger.add_log(f"Removed directory: {item}")
-                                else:
-                                    os.remove(item_path)
-                                    logger.add_log(f"Removed file: {item}")
-                    except Exception as e:
-                        logger.add_log(f"Error cleaning project directory: {str(e)}", "ERROR")
+                        logger.add_log(f"Starting deployment for {project.name}")
+                        base_directory = os.path.join(os.getcwd(), 'projects')
+                        project.directory = os.path.join(base_directory, project.directory)
+                        logger.add_log(f"Project directory: {project.directory}")
 
-                    os.makedirs(project.directory, exist_ok=True)
-                    logger.add_log("Ensured project directory exists")
+                        try:
+                            if os.path.exists(project.directory):
+                                logger.add_log("Cleaning existing contents in the project directory...")
+                                for item in os.listdir(project.directory):
+                                    item_path = os.path.join(project.directory, item)
+                                    if os.path.isdir(item_path):
+                                        shutil.rmtree(item_path)
+                                        logger.add_log(f"Removed directory: {item}")
+                                    else:
+                                        os.remove(item_path)
+                                        logger.add_log(f"Removed file: {item}")
+                        except Exception as e:
+                            logger.add_log(f"Error cleaning project directory: {str(e)}", "ERROR")
 
-                    clone_url = f"https://{project.github_token}@github.com/{project.git_repo}"
-                    logger.add_log("Cloning repository...")
-                    result = subprocess.run(
-                        ['git', 'clone', '-b', project.branch, clone_url, '.'],
-                        cwd=project.directory,
-                        capture_output=True,
-                        text=True
-                    )
+                        os.makedirs(project.directory, exist_ok=True)
+                        logger.add_log("Ensured project directory exists")
 
-                    if result.returncode != 0:
-                        logger.add_log(f"Error cloning repository: {result.stderr}", "ERROR")
-                        raise Exception("Clone failed")
-
-                    logger.add_log("Repository cloned successfully")
-
-                    dockerfile_path = os.path.join(project.directory, 'Dockerfile')
-                    if not os.path.isfile(dockerfile_path):
-                        logger.add_log("Dockerfile not found", "WARNING")
-
-                    for command in project.deploy_commands.split(','):
-                        logger.add_log(f"Executing: {command}")
+                        clone_url = f"https://{project.github_token}@github.com/{project.git_repo}"
+                        logger.add_log("Cloning repository...")
                         result = subprocess.run(
-                            command.strip(),
-                            shell=True,
+                            ['git', 'clone', '-b', project.branch, clone_url, '.'],
                             cwd=project.directory,
                             capture_output=True,
                             text=True
                         )
-                        if result.stdout:
-                            logger.add_log(result.stdout)
-                        if result.stderr:
-                            logger.add_log(result.stderr, "WARNING")
 
-                    project.updated = False
-                    project.is_deployed = True
-                    db.session.commit()
-                    logger.add_log("Deployment completed successfully")
-                except Exception as e:
-                    logger.add_log(f"Deployment failed: {str(e)}", "ERROR")
-                finally:
-                    logger.mark_complete()
+                        if result.returncode != 0:
+                            logger.add_log(f"Error cloning repository: {result.stderr}", "ERROR")
+                            raise Exception("Clone failed")
 
-        thread = threading.Thread(target=deployment_task)
-        thread.start()
-        return jsonify({'message': 'Deployment started'}), 202
+                        logger.add_log("Repository cloned successfully")
+
+                        dockerfile_path = os.path.join(project.directory, 'Dockerfile')
+                        if not os.path.isfile(dockerfile_path):
+                            logger.add_log("Dockerfile not found", "WARNING")
+
+                        for command in project.deploy_commands.split(','):
+                            logger.add_log(f"Executing: {command}")
+                            result = subprocess.run(
+                                command.strip(),
+                                shell=True,
+                                cwd=project.directory,
+                                capture_output=True,
+                                text=True
+                            )
+                            if result.stdout:
+                                logger.add_log(result.stdout)
+                            if result.stderr:
+                                logger.add_log(result.stderr, "WARNING")
+
+                        project.updated = False
+                        project.is_deployed = True
+                        db.session.commit()
+                        logger.add_log("Deployment completed successfully")
+                    except Exception as e:
+                        logger.add_log(f"Deployment failed: {str(e)}", "ERROR")
+                    finally:
+                        logger.mark_complete()
+
+            thread = threading.Thread(target=deployment_task)
+            thread.start()
+            return jsonify({'message': 'Deployment started'}), 202
 
     return jsonify({'message': 'No action taken'}), 200
 
